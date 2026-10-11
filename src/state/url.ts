@@ -84,11 +84,12 @@ export function urlSearch(s: Shareable, current: string): string {
   }
   if (s.query.trim()) p.set("q", s.query.trim());
   // Keep switches that aren't app state (?live=local for multiplayer tests, ?diag for the graphics
-  // check, ?debug for the in-app scene probe).
+  // check, ?kit for the walk world's model gallery, ?debug for the in-app scene probe).
   const cur = new URLSearchParams(current);
   const live = cur.get("live");
   if (live) p.set("live", live);
   if (cur.has("diag")) p.set("diag", "");
+  if (cur.has("kit")) p.set("kit", cur.get("kit") ?? "");
   if (cur.has("debug")) p.set("debug", "");
   // ?at=x,z[,heading[,distance]] starts the walk world's walker somewhere (development builds only; src/views/walk/engine.ts).
   if (import.meta.env.DEV && cur.has("at")) p.set("at", cur.get("at") ?? "");

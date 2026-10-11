@@ -11,19 +11,29 @@ import { useStore } from "./state/store";
 const MindMapView = lazy(() => import("./views/mindmap/MindMapView"));
 const WalkView = lazy(() => import("./views/walk/WalkView"));
 const DiagView = lazy(() => import("./views/diag/DiagView"));
+const KitView = lazy(() => import("./views/kit/KitView"));
 /** ?debug adds a probe panel that measures the live 3D scene (why logos are or aren't showing). */
 const DebugProbe = DEBUG ? lazy(() => import("./debug/DebugProbe")) : null;
+const query = new URLSearchParams(window.location.search);
 /** ?diag opens the graphics check (for devices where the 3D logos don't show). */
-const DIAG = new URLSearchParams(window.location.search).has("diag");
+const DIAG = query.has("diag");
+/** ?kit opens the gallery of the walk world's models (src/views/kit). */
+const KIT = query.has("kit");
 
 export default function App() {
-  return DIAG ? (
-    <Suspense fallback={<div className="view-loading">Loading the graphics check…</div>}>
-      <DiagView />
-    </Suspense>
-  ) : (
-    <MapApp />
-  );
+  if (DIAG)
+    return (
+      <Suspense fallback={<div className="view-loading">Loading the graphics check…</div>}>
+        <DiagView />
+      </Suspense>
+    );
+  if (KIT)
+    return (
+      <Suspense fallback={<div className="view-loading">Loading the kit…</div>}>
+        <KitView />
+      </Suspense>
+    );
+  return <MapApp />;
 }
 
 function MapApp() {

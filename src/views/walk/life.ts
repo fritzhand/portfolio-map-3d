@@ -48,7 +48,7 @@ function wingGeometry(side: 1 | -1, len: number, chord: number, lift = 0): THREE
   return g;
 }
 
-function balloonParts(p: ScenePalette): Part[] {
+export function balloonParts(p: ScenePalette): Part[] {
   const colors = [p.awning, blend(p.cloud, p.wallCream, 0.4), p.flag, blend(p.shutter, p.cloud, 0.2), p.roofRose, blend(p.cloud, p.wallCream, 0.4)];
   const parts: Part[] = [];
   const gores = 12;
@@ -63,7 +63,7 @@ function balloonParts(p: ScenePalette): Part[] {
   return parts;
 }
 
-function catParts(fur: THREE.Color, p: ScenePalette): { body: Part[]; tail: Part[] } {
+export function catParts(fur: THREE.Color, p: ScenePalette): { body: Part[]; tail: Part[] } {
   const dark = tone(fur, 0.7);
   const light = blend(fur, p.cloud, 0.55);
   const body: Part[] = [
