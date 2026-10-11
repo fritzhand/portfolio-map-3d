@@ -1,7 +1,7 @@
 /* The village around the plaza: a ring street with houses along its outer side, lamp posts with
    wire strung between them (and bunting on it), crosswalks where the district roads cross, bus
-   shelters, picnic spots, signposts at the road mouths, fences and a patchy stone wall at the
-   village's edge. The district roads run through gaps the lots leave open.
+   shelters, picnic spots, hydrants and mailboxes at the road mouths, fences and a patchy stone wall
+   at the village's edge. The district roads run through gaps the lots leave open.
 
    lotsFor() decides where every house stands (pure: village.test.ts), from the layout alone: houses
    march around the ring in order, skip the road mouths, and leave small gaps between them.
@@ -14,7 +14,7 @@ import { ROAD_WIDTH, VILLAGE, PLAZA_RADIUS, seededRandom, hashString, type World
 import { HOUSE_KINDS, buildHouse, type HouseKind } from "./houses";
 import { box, blend, type Part } from "./kit";
 import type { ScenePalette } from "./palette";
-import { fence, fountain, hydrant, lampPost, LAMP_HEIGHT, LAMP_WIRE_SPREAD, LAMP_WIRE_Y, mailbox, picnic, busStop, signPost, stall, stoneWall, trashCan, wire } from "./street";
+import { fence, fountain, hydrant, lampPost, LAMP_HEIGHT, LAMP_WIRE_SPREAD, LAMP_WIRE_Y, mailbox, picnic, busStop, stall, stoneWall, trashCan, wire } from "./street";
 import { merge, paint } from "./util";
 import type { BoxCollider, Collider } from "./world";
 
@@ -235,8 +235,7 @@ export function buildVillage(
     const across = ROAD_WIDTH / 2 + 1.5;
     const rr = VILLAGE.streetR + VILLAGE.streetWidth / 2 + 2.4;
     const yaw = Math.atan2(-nx, -nz);
-    stand(dressing, signPost(p), ux * rr + nx * across, uz * rr + nz * across, Math.atan2(ux, uz) + Math.PI / 2);
-    colliders.push({ x: ux * rr + nx * across, z: uz * rr + nz * across, r: 0.25, h: 3 });
+    // (The fingerposts where the roads leave the plaza say where each road goes: wayfinding.ts.)
     stand(dressing, hydrant(p), ux * (rr + 1.2) - nx * (across + 0.4), uz * (rr + 1.2) - nz * (across + 0.4), 0);
     colliders.push({ x: ux * (rr + 1.2) - nx * (across + 0.4), z: uz * (rr + 1.2) - nz * (across + 0.4), r: 0.3, h: 0.9 });
     stand(dressing, mailbox(p), ux * (rr + 6.5) + nx * (across + 0.6), uz * (rr + 6.5) + nz * (across + 0.6), yaw);

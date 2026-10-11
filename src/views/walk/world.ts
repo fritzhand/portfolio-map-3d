@@ -18,6 +18,7 @@ import { plazaLamps, plazaSeats } from "../../data/hub";
 import { CORE_RADIUS, PLAZA_RADIUS, ROAD_WIDTH, VILLAGE, decorPoints, onRoad, hashString, seededRandom, type AreaSlug, type WorldLayout } from "../../data/layout";
 import { cpuCanvas, cpuContext } from "../../three/cpuCanvas";
 import { labelTexture } from "../../three/logoTexture";
+import { L } from "../../site";
 import { cloudShadowTexture, createToonShared, toonDepthMaterial, toonMaterial, toonify, type ToonShared } from "../../three/toon";
 import { FOLIAGE_BODY, FOLIAGE_KINDS, FOLIAGE_WIND, foliageFarGeometry, foliageGeometry, type FoliageKind } from "./foliage";
 import { buildGrass, type GrassField } from "./grass";
@@ -28,6 +29,7 @@ import { buildFinds, findSpots, type Finds } from "./finds";
 import { buildLife } from "./life";
 import { buildScenery } from "./scenery";
 import { buildVillage } from "./village";
+import { buildWayfinding } from "./wayfinding";
 import { mix, type ScenePalette } from "./palette";
 import { buildSea } from "./sea";
 import { buildSky } from "./sky";
@@ -460,6 +462,12 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   colliders.push(...village.colliders);
   boxes.push(...village.boxes);
   blockers.push(...village.blockers);
+
+  /* ---------------- fingerposts at the road mouths and the "Walking times" board (wayfinding.ts) ---------------- */
+  const wayfinding = buildWayfinding(layout, districts, L.hub, p, own, { prop: propMaterial, nearFade });
+  root.add(wayfinding.group);
+  colliders.push(...wayfinding.colliders);
+  boxes.push(...wayfinding.boxes);
 
   /* ---------------- the set pieces out in the hills and on the coast (scenery.ts) ---------------- */
   const scenery = buildScenery(layout, terrain, p, own, {
