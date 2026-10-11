@@ -9,18 +9,19 @@ import * as THREE from "three";
 import { mix, type ScenePalette } from "./palette";
 import { merge, paint } from "./util";
 
-export type FoliageKind = "oak" | "pine" | "palm" | "shrub" | "flowers" | "rock";
+export type FoliageKind = "oak" | "pine" | "palm" | "cypress" | "shrub" | "flowers" | "rock";
 
-export const FOLIAGE_KINDS: readonly FoliageKind[] = ["oak", "pine", "palm", "shrub", "flowers", "rock"];
+export const FOLIAGE_KINDS: readonly FoliageKind[] = ["oak", "pine", "palm", "cypress", "shrub", "flowers", "rock"];
 
 /** How far each kind sways in the wind (world units at a height of 4; see src/three/toon.ts). */
-export const FOLIAGE_WIND: Record<FoliageKind, number> = { oak: 0.09, pine: 0.06, palm: 0.13, shrub: 0.05, flowers: 0.05, rock: 0 };
+export const FOLIAGE_WIND: Record<FoliageKind, number> = { oak: 0.09, pine: 0.06, palm: 0.13, cypress: 0.05, shrub: 0.05, flowers: 0.05, rock: 0 };
 
 /** Collision radius, height (for the follow camera) and crown radius per unit of scale. */
 export const FOLIAGE_BODY: Record<FoliageKind, { r: number; h: number; crown: number }> = {
   oak: { r: 0.45, h: 4.4, crown: 1.9 },
   pine: { r: 0.35, h: 6.4, crown: 1.4 },
   palm: { r: 0.4, h: 5.2, crown: 1.7 },
+  cypress: { r: 0.4, h: 7.2, crown: 1.1 },
   shrub: { r: 0.65, h: 1.1, crown: 0 },
   flowers: { r: 0.65, h: 1.1, crown: 0 },
   rock: { r: 0.75, h: 0.7, crown: 0 },
@@ -47,6 +48,8 @@ export function foliageFarGeometry(kind: FoliageKind, p: ScenePalette): THREE.Bu
       }
       return merge(parts);
     }
+    case "cypress":
+      return merge([paint(new THREE.CylinderGeometry(0.1, 0.16, 1.0, 4).translate(0, 0.5, 0), p.trunk), clump(0.8, 0, 3.4, 0, 2.5, p.treeDark)]);
     case "shrub":
     case "flowers":
       return merge([clump(1.05, 0.15, 0.48, 0, 0.62, mix(leaf, p.grass, kind === "flowers" ? 0.2 : 0.4))]);
@@ -116,6 +119,18 @@ export function foliageGeometry(kind: FoliageKind, p: ScenePalette): THREE.Buffe
       }
       parts.push(paint(new THREE.IcosahedronGeometry(0.34, 0).translate(top.x, top.y - 0.05, 0), mix(p.palmTrunk, leafDark, 0.4)));
       return merge(parts);
+    }
+    case "cypress": {
+      // A tall, narrow flame of dark foliage: stacked faceted clumps on a short bare trunk.
+      const dark = mix(leafDark, p.ink, 0.12);
+      return merge([
+        paint(new THREE.CylinderGeometry(0.1, 0.17, 1.2, 5).translate(0, 0.6, 0), trunk),
+        clump(0.74, 0, 2.0, 0, 1.2, dark),
+        clump(0.66, 0.05, 3.1, 0.04, 1.35, mix(dark, leaf, 0.22)),
+        clump(0.54, -0.04, 4.2, -0.03, 1.45, dark),
+        clump(0.4, 0.02, 5.2, 0.02, 1.55, mix(dark, leaf, 0.3)),
+        clump(0.24, 0, 6.0, 0, 1.6, dark),
+      ]);
     }
     case "shrub":
       return merge([

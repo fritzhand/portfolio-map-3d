@@ -7,12 +7,14 @@ with three ways in:
 | View | What it's for |
 |---|---|
 | **Globe** | A slowly turning globe of logos. Each district (a sector, a track, a program) owns a region of the sphere; arcs show documented connections. Select a logo to see the company, its connections and its potential fits among the others. An optional second globe shows the organization's people (coaches, mentors, advisors). |
-| **Walk** | Your own explorer on an island: the organization's hub on a central plaza, a neighborhood per district, a drop pin and badge for every company. Walk up to one and its details slide up. Other visitors can walk there with you, live. A portal on the plaza leads to the Nexus. |
+| **Walk** | Your own explorer, a kid in shorts and a straw hat, in a painted summer afternoon: the organization's hub on a central plaza, a village street of houses with lamp posts and bunting around it, a gazebo-crowned neighborhood per district, a drop pin and badge for every company, and a coast and hills with a lighthouse, a pier, a windmill and a farm to wander to. Walk up to a pin and its details slide up. Other visitors can walk there with you, live. A portal on the plaza leads to the Nexus. |
 | **List** | The same records as a searchable, filterable directory. No 3D required; every record is reachable here. |
 
 In Walk, use WASD or the arrow keys to move, Shift to run, and Space for a long jump.
 Press F or use the car button to summon a vehicle, get in, or get out. Touch controls provide
-the same travel actions. The renderer follows the map's light or dark theme.
+the same travel actions. The renderer follows the map's light or dark theme. Five keepsakes are hidden
+around the island (the counter by the sound button); the sound (breeze, cicadas, the sea, footsteps)
+is made in the browser and stays off until you turn it on.
 
 Plus a **provider finder** ("is there a company here that can do this for me?"), search, deep
 links for everything, and a strict, provenance-first data contract.

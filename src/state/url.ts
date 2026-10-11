@@ -90,6 +90,8 @@ export function urlSearch(s: Shareable, current: string): string {
   if (live) p.set("live", live);
   if (cur.has("diag")) p.set("diag", "");
   if (cur.has("debug")) p.set("debug", "");
+  // ?at=x,z[,heading[,distance]] starts the walk world's walker somewhere (development builds only; src/views/walk/engine.ts).
+  if (import.meta.env.DEV && cur.has("at")) p.set("at", cur.get("at") ?? "");
   return p.toString();
 }
 

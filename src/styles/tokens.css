@@ -157,32 +157,32 @@
 /* ---- 3D scene palette: the walk world on a warm afternoon (its moonlit night is in
    src/views/walk/scene-theme.css; see README) ---- */
 :root {
-  --scene-sky-top: #2a83cf;
-  --scene-sky-mid: #6db6e6;
-  --scene-sky-bottom: #cdeefb;
-  --scene-sky-glow: #fff1d2;     /* around the low sun */
-  --scene-fog: #d3ebf5;          /* the haze distant land fades into */
+  --scene-sky-top: #3a8ede;
+  --scene-sky-mid: #79b8e8;
+  --scene-sky-bottom: #fbe4c4;
+  --scene-sky-glow: #ffe3b4;     /* around the low sun */
+  --scene-fog: #e9dfcb;          /* the haze distant land fades into */
   --scene-sun: #fff0d6;
-  --scene-cloud: #fff6e8;        /* sunlit cumulus */
-  --scene-cloud-shade: #e8cfc3;  /* their peach undersides */
+  --scene-cloud: #fff1d6;        /* sunlit cumulus */
+  --scene-cloud-shade: #f0c9a8;  /* their peach undersides */
   --scene-sea: #2b8cb8;
   --scene-sea-shallow: #46c4c3;
   --scene-sea-deep: #1a5a8e;
-  --scene-sand: #efdcb0;
-  --scene-grass: #7cb26c;
-  --scene-grass-dark: #5c975c;
-  --scene-grass-tip: #b9d98a;    /* grass tips and sun-dried patches */
-  --scene-road: #a6abb1;
+  --scene-sand: #e6cf9e;
+  --scene-grass: #82b56d;
+  --scene-grass-dark: #5f9a62;
+  --scene-grass-tip: #c2dc8a;    /* grass tips and sun-dried patches */
+  --scene-road: #a3a9b0;
   --scene-road-line: #f6edd5;
-  --scene-plaza: #e2d8c5;
-  --scene-tree: #3e8d6b;
-  --scene-tree-dark: #286c58;
+  --scene-plaza: #dccfb6;
+  --scene-tree: #378a68;
+  --scene-tree-dark: #245f55;
   --scene-trunk: #8a6a51;
   --scene-rock: #b8ad9f;
   --scene-palm: #6e8a34;
   --scene-palm-trunk: #9a9278;
   --scene-bloom: #d9573f;        /* blossoms on the flowering shrubs */
-  --scene-lamp-glass: #f5f0e3;
+  --scene-lamp-glass: #fff1cf;
   /* The hub building (src/views/walk/hub.ts): light walls, a pale roof, dark frames, glass. */
   --scene-paint: #ece8df;        /* walls and piers */
   --scene-coping: #c8ccce;       /* parapet coping */
@@ -193,6 +193,18 @@
   --scene-mulch: #4a3a2c;        /* planter beds */
   --scene-glass: #22303a;
   --scene-sign-panel: #f7f6f2;   /* the rooftop sign's light face */
+  --scene-wall-mauve: #a08b88;
+  --scene-wall-cream: #e8d3a2;
+  --scene-wall-stone: #bfae9c;
+  --scene-roof-coral: #e27560;
+  --scene-roof-rose: #bb5a73;
+  --scene-roof-slate: #5f6d99;
+  --scene-solar: #3f4f86;
+  --scene-window: #41525a;
+  --scene-window-light: #a9d6ea;
+  --scene-shutter: #6aa89d;
+  --scene-awning: #d9604b;
+  --scene-flag: #e9a23b;
   --scene-person: #6f8296; /* the walk world's People area: its ground ring, landmark, arch and pin heads (a lighter tint of --person, which the badge rings keep) */
   --mindmap-bg-top: #f7fafb;
   --mindmap-bg-bottom: #e4eef2;

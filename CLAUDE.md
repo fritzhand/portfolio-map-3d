@@ -65,6 +65,10 @@ Optional features follow the data: no people → no people globe, list tab or wa
   while frames run slow). Scene colors are the `--scene-*` tokens: an afternoon in the light theme,
   moonlight in the dark one.
 - Dimming never hides a badge (about 3:1 contrast kept); an active highlight always shows a chip.
+- The walk world's village, set pieces and animals are procedural (`src/views/walk/kit.ts` shapes,
+  `houses.ts`, `street.ts`, `scenery.ts`, `life.ts`): no model, texture or sound file, ever. Where
+  things stand comes from `lotsFor()`/`anchorsFor()`/`findSpots()` (pure, tested), never from
+  `Math.random`. The sound (`ambience.ts`) is synthesized and starts only after a click.
 - Honor `prefers-reduced-motion`. No per-frame React state updates in scenes.
 - Districts are groupings, never addresses: nothing claims to show where a company is.
 

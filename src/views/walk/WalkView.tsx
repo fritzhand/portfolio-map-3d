@@ -18,7 +18,7 @@
    held to a budget and lowered while the device cannot keep up
    (src/three/adaptiveDpr.ts). */
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronUp, Car, CircleHelp, LocateFixed, Map as MapIcon, Minus, Orbit, Plus, Shuffle, UserRound, Users, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ChevronDown, ChevronUp, Car, CircleHelp, LocateFixed, Map as MapIcon, Minus, Orbit, Plus, Shuffle, Sparkles, UserRound, Users, Volume2, VolumeX, X } from "lucide-react";
 import { Component, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode, type RefObject } from "react";
 import type { PerspectiveCamera } from "three";
 import { COMPANIES, PEOPLE, SITE, companyBySlug, districtBySlug, personBySlug } from "../../data/catalog";
@@ -35,6 +35,7 @@ import SearchChip from "../../components/SearchChip";
 import { AdaptiveDpr, budgetDpr } from "../../three/adaptiveDpr";
 import { watchContext } from "../../three/contextWatch";
 import { areaBySlug, countLabel, isPeopleArea, walkAreas } from "./areas";
+import { FIND_KINDS, type FindProgress } from "./finds";
 import { WalkEngine, isTextField, type Overlay, type PortalState } from "./engine";
 import { arrivalFly } from "./nav";
 import { prefersReducedMotion } from "./util";
@@ -42,6 +43,7 @@ import "./walk.css";
 
 const INTRO_KEY = "portfolio-map-walk-intro";
 const SHOW_OTHERS_KEY = "portfolio-map-walk-show-others";
+const SOUND_KEY = "portfolio-map-walk-sound";
 /** How long the portal's departure shows before the Nexus opens (time to cancel). */
 const PORTAL_DELAY_MS = 1600;
 /** The pixel ratio's ceiling and the drawing buffer's pixel budget (src/three/adaptiveDpr.ts budgetDpr). */
@@ -297,6 +299,11 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
     }
   });
   const [mapOpen, setMapOpen] = useState(!narrow);
+  const [sound, setSound] = useState(() => readFlag(SOUND_KEY) === "1");
+  const [keeps, setKeeps] = useState<FindProgress>({ total: FIND_KINDS.length, found: [] });
+  const [keepsOpen, setKeepsOpen] = useState(false);
+  const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
+  const keepsId = useId();
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 760px)");
     const resize = () => {
@@ -319,6 +326,7 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
   // Build the engine once per mount (a tick late, so StrictMode's throwaway mount builds nothing).
   useEffect(() => {
     let bannerKey = 0;
+    let toastKey = 0;
     let e: WalkEngine | null = null;
     const timer = window.setTimeout(() => {
       e = new WalkEngine(
@@ -337,11 +345,20 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
             else if (state === "far") setLeaving(false);
           },
           onPortalEnter: () => setLeaving(true),
+          onFind: (kind, progress) => {
+            setKeeps(progress);
+            const all = progress.found.length >= progress.total;
+            setToast({
+              text: all ? `You found all ${progress.total} keepsakes. Thank you for wandering.` : `You found ${kind.name}. (${progress.found.length}/${progress.total})`,
+              key: ++toastKey,
+            });
+          },
         },
         getVisitor().avatar,
         prefersReducedMotion(),
         getVisitor().id,
       );
+      setKeeps(e.world.finds.progress());
       setEngine(e);
       // Development only: a handle for QA scripts. Stripped from production builds.
       if (import.meta.env.DEV) (window as unknown as { __walk?: WalkEngine }).__walk = e;
@@ -355,6 +372,22 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
   }, []);
 
   useEffect(() => engine?.setReduced(reduced), [engine, reduced]);
+  useEffect(() => {
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(null), 6000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+  // Sound is off until the visitor asks for it. A remembered "on" starts again at the first click or key press (a browser's rule).
+  useEffect(() => {
+    if (!engine || !sound) return;
+    const resume = () => engine.setSound(true);
+    window.addEventListener("pointerdown", resume, { once: true });
+    window.addEventListener("keydown", resume, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", resume);
+      window.removeEventListener("keydown", resume);
+    };
+  }, [engine, sound]);
   useEffect(() => engine?.setHighlight(highlight), [engine, highlight]);
   // The store holds at most one of a company and a person; either one's pin gets the selection ring.
   useEffect(() => engine?.setSelected(selected ?? person), [engine, selected, person]);
@@ -479,6 +512,17 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
     if (e.detail > 0) viewRef.current?.focus({ preventScroll: true });
   }, []);
 
+  const toggleSound = useCallback(
+    (e: ReactMouseEvent) => {
+      const next = !sound;
+      setSound(next);
+      writeFlag(SOUND_KEY, next ? "1" : "0");
+      engine?.setSound(next);
+      backToWorld(e);
+    },
+    [sound, engine, backToWorld],
+  );
+
   const areas = walkAreas();
   const nearCompany = near ? companyBySlug.get(near) ?? null : null;
   const nearPerson = near ? personBySlug.get(near) ?? null : null;
@@ -511,7 +555,48 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
               <CircleHelp size={18} aria-hidden="true" />
             </button>
           )}
+          {!intro && (
+            <button type="button" className="walk-icon-btn" aria-pressed={sound} onClick={toggleSound} aria-label={sound ? "Turn the sound off" : "Turn the sound on"} title={sound ? "Sound on" : "Sound off"}>
+              {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
+            </button>
+          )}
+          {!intro && (
+            <button
+              type="button"
+              className="walk-pill walk-keepsakes"
+              aria-expanded={keepsOpen}
+              aria-controls={keepsOpen ? keepsId : undefined}
+              onClick={(e) => {
+                setKeepsOpen((o) => !o);
+                backToWorld(e);
+              }}
+              title="Keepsakes found"
+            >
+              <Sparkles size={16} aria-hidden="true" />
+              <span>
+                {keeps.found.length}/{keeps.total}
+              </span>
+              <span className="sr-only">keepsakes found</span>
+            </button>
+          )}
         </div>
+        {keepsOpen && !intro && (
+          <section className="walk-card walk-pop walk-keeps-pop" id={keepsId} aria-label="Keepsakes">
+            <h3 className="walk-pop-h">Keepsakes hidden around the island</h3>
+            <ul className="walk-keeps-list">
+              {FIND_KINDS.map((k) => {
+                const got = keeps.found.includes(k.id);
+                return (
+                  <li key={k.id} className={got ? "is-found" : undefined}>
+                    <span className="walk-keeps-mark" aria-hidden="true">{got ? "\u2713" : "?"}</span>
+                    <span>{got ? <>You found <strong>{k.name}</strong>.</> : k.hint}</span>
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="walk-pop-note">Wander out to the coast and the hills. What you find is kept in this browser only.</p>
+          </section>
+        )}
         {/* A search outranks the district in the highlight, so its chip replaces the district's. */}
         <SearchChip />
         {focusDistrict && !query.trim() && (
@@ -691,6 +776,12 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
         <DistrictBanner key={banner.key} slug={banner.slug} reduced={reduced} engine={engine} onDone={clearBanner} />
       )}
       {nudge > 0 && <PausedHint key={nudge} />}
+      {toast && (
+        <div className="walk-toast" key={toast.key} role="status">
+          <Sparkles size={16} aria-hidden="true" />
+          <span>{toast.text}</span>
+        </div>
+      )}
 
       {!intro && <div className="walk-hud walk-travel-controls">
         <button type="button" className="walk-pill" onClick={(e) => { engine?.jump(); backToWorld(e); }} disabled={carAction === "exit"} title="Long jump (Space)">
@@ -809,6 +900,7 @@ function IntroCard({ onClose }: { onClose: () => void }) {
           <div><dt>Turn</dt><dd>Drag or <kbd>Q</kbd> / <kbd>E</kbd></dd></div>
           <div><dt>Zoom</dt><dd>Scroll or <kbd>+</kbd> / <kbd>-</kbd></dd></div>
           <div><dt>Open nearby</dt><dd><kbd>Enter</kbd></dd></div>
+          <div><dt>Keepsakes</dt><dd>Five are hidden: find them by wandering</dd></div>
         </dl>
         <dl className="walk-touch-controls">
           <div><dt>Walk</dt><dd>Drag or hold arrows</dd></div>

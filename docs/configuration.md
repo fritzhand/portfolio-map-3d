@@ -69,3 +69,10 @@ building, replace `src/data/hub.ts` and `src/views/walk/hub.ts` together, keepin
 (the collision, camera and minimap code reads them). The districts stand on a ring around the
 plaza, each sized by its company count; nothing in the walk world claims to show where a company
 is.
+
+Around the plaza runs a ring street with houses on its outer side (`src/views/walk/village.ts`);
+the roads to the districts cross it through gaps the houses leave open. Every district is crowned
+by a gazebo in its color. Between the districts, on the coast and in the hills, stand a lighthouse,
+a pier, a beach, a windmill, a farm, a campsite and a water tower (`scenery.ts`), one or two per
+wedge, and five keepsakes are hidden beside them (`finds.ts`; what a visitor found stays in their
+browser). All of it is decoration: no data reads it and nothing in it points at a company.

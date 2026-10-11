@@ -3,7 +3,7 @@
    low-poly hills that roll down to a sandy beach with a ragged,
    deterministic shoreline. */
 import type { WorldLayout } from "../../data/layout";
-import { hashString } from "../../data/layout";
+import { ROAD_WIDTH, VILLAGE, hashString } from "../../data/layout";
 import { smoothstep, valueNoise2D } from "./util";
 
 export const SEA_LEVEL = -0.35;
@@ -38,16 +38,32 @@ export function createTerrain(layout: WorldLayout): Terrain {
 
   const heightAt = (x: number, z: number) => {
     const r = Math.hypot(x, z);
-    if (r < ring) return 0;
+    if (r < VILLAGE.outer + 3) return 0;
     const s = shoreAt(Math.atan2(z, x));
     let edge = Infinity;
     for (const d of layout.discs) {
       const e = Math.hypot(x - d.x, z - d.z) - d.r;
       if (e < edge) edge = e;
     }
-    const mask = smoothstep(5, 15, edge) * smoothstep(ring, ring + 10, r) * (1 - smoothstep(s - 21, s - 10, r));
+    // Hills roll between the roads too, past the village; the village, the roads and every
+    // district stay flat.
+    let roadAway = Infinity;
+    for (const d of layout.discs) {
+      const ux = Math.cos(d.angle);
+      const uz = Math.sin(d.angle);
+      if (x * ux + z * uz < 0) continue;
+      roadAway = Math.min(roadAway, Math.abs(-x * uz + z * ux));
+    }
+    const mask =
+      smoothstep(5, 15, edge) *
+      smoothstep(VILLAGE.outer + 3, VILLAGE.outer + 20, r) *
+      smoothstep(ROAD_WIDTH / 2 + 6, ROAD_WIDTH / 2 + 18, roadAway) *
+      (1 - smoothstep(s - 21, s - 10, r));
     let h = 0;
-    if (mask > 0) h = (n2(x * 0.05, z * 0.05) * 0.7 + n2(x * 0.13 + 40, z * 0.13 + 40) * 0.3) * 3.4 * mask;
+    if (mask > 0) {
+      const amp = 3.6 + 2.2 * smoothstep(ring, ring + 36, r);
+      h = (n2(x * 0.045, z * 0.045) * 0.7 + n2(x * 0.13 + 40, z * 0.13 + 40) * 0.3) * amp * mask;
+    }
     if (r > s - 9) h -= 0.55 * smoothstep(s - 9, s + 1, r);
     if (r > s + 1) h -= 4 * smoothstep(s + 1, s + 24, r) + 3.5 * smoothstep(s + 24, s + 90, r);
     return h;
