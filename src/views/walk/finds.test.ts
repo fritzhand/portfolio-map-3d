@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { COMPANIES, DISTRICTS, PEOPLE } from "../../data/catalog";
 import { layoutWorld, onRoad } from "../../data/layout";
-import { FIND_KINDS, findSpots } from "./finds";
+import { FIND_KINDS, findHint, findSpots } from "./finds";
 import { anchorsFor } from "./scenery";
 import { createTerrain } from "./terrain";
 
@@ -41,5 +41,23 @@ describe("findSpots", () => {
   it("still hides every find on a map with no set pieces", () => {
     const bare = findSpots(layout, [], open);
     expect(bare).toHaveLength(FIND_KINDS.length);
+    for (const s of bare) expect(s.near).toBeNull();
+  });
+
+  it("gives each find its own hint beside its own piece, and says where it really is otherwise", () => {
+    for (const s of spots) {
+      const kind = FIND_KINDS.find((k) => k.id === s.id)!;
+      expect(s.near).toBe(kind.near);
+      expect(findHint(kind, s)).toBe(kind.hint);
+    }
+    // An island with only orchards: every find hides by one, and the list says so.
+    const orchards = anchors.filter((a) => a.kind === "orchard");
+    const elsewhere = findSpots(layout, orchards.length ? orchards : [{ ...anchors[0], kind: "orchard" }], open);
+    for (const s of elsewhere) {
+      const kind = FIND_KINDS.find((k) => k.id === s.id)!;
+      expect(s.near).toBe("orchard");
+      expect(findHint(kind, s)).toBe("Somewhere near an orchard.");
+    }
+    expect(findHint(FIND_KINDS[0], { id: FIND_KINDS[0].id, x: 0, z: 0, near: null })).toBe("Somewhere out on the hills.");
   });
 });

@@ -18,7 +18,7 @@ import { plazaLamps, plazaSeats } from "../../data/hub";
 import { CORE_RADIUS, PLAZA_RADIUS, ROAD_WIDTH, VILLAGE, decorPoints, onRoad, hashString, seededRandom, type AreaSlug, type WorldLayout } from "../../data/layout";
 import { cpuCanvas, cpuContext } from "../../three/cpuCanvas";
 import { labelTexture } from "../../three/logoTexture";
-import { L } from "../../site";
+import { L, WALK } from "../../site";
 import { cloudShadowTexture, createToonShared, toonDepthMaterial, toonMaterial, toonify, type ToonShared } from "../../three/toon";
 import { FOLIAGE_BODY, FOLIAGE_KINDS, FOLIAGE_WIND, foliageFarGeometry, foliageGeometry, type FoliageKind } from "./foliage";
 import { buildGrass, type GrassField } from "./grass";
@@ -26,9 +26,10 @@ import { buildHub, drawHubGround } from "./hub";
 import { buildPortal } from "./portal";
 import { buildRoads } from "./roads";
 import { buildFinds, findSpots, type Finds } from "./finds";
-import { buildLife } from "./life";
+import { buildLife, type Life } from "./life";
+import { PIECE_KINDS, type PieceKind } from "./pieces";
 import { buildScenery } from "./scenery";
-import { buildVillage } from "./village";
+import { buildVillage, type Village } from "./village";
 import { buildWayfinding } from "./wayfinding";
 import { mix, type ScenePalette } from "./palette";
 import { buildSea } from "./sea";
@@ -481,7 +482,10 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   root.add(portal.group);
 
   /* ---------------- the village: houses, street lamps and wires, bus shelters (village.ts) ---------------- */
-  const village = buildVillage(layout, p, own, { prop: propMaterial, glass: glassMaterial });
+  // site.json can leave the village out (walk.village: false): the plaza and the roads stay.
+  const village: Village = WALK.village
+    ? buildVillage(layout, p, own, { prop: propMaterial, glass: glassMaterial })
+    : { group: new THREE.Group(), colliders: [], boxes: [], blockers: [], plants: [], dispose() {} };
   root.add(village.group);
   colliders.push(...village.colliders);
   boxes.push(...village.boxes);
@@ -494,19 +498,28 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   boxes.push(...wayfinding.boxes);
 
   /* ---------------- the set pieces out in the hills and on the coast (scenery.ts) ---------------- */
-  const scenery = buildScenery(layout, terrain, p, own, {
-    prop: propMaterial,
-    glass: glassMaterial,
-    panes: own(kit.panes()),
-    lit: own(kit.lit()),
-  });
+  // Every kind, or the ones site.json lists (walk.setPieces).
+  const allow = WALK.setPieces && PIECE_KINDS.filter((k: PieceKind) => WALK.setPieces!.includes(k));
+  const scenery = buildScenery(
+    layout,
+    terrain,
+    p,
+    own,
+    {
+      prop: propMaterial,
+      glass: glassMaterial,
+      panes: own(kit.panes()),
+      lit: own(kit.lit()),
+    },
+    allow,
+  );
   root.add(scenery.group);
   colliders.push(...scenery.colliders);
   boxes.push(...scenery.boxes);
   blockers.push(...scenery.blockers);
 
   /* ---------------- gulls, butterflies, motes, a balloon, a cat (life.ts) ---------------- */
-  const life = buildLife(layout, terrain, p, own, toon, coarse);
+  const life: Life = WALK.wildlife ? buildLife(layout, terrain, p, own, toon, coarse) : { group: new THREE.Group(), update() {}, dispose() {} };
   root.add(life.group);
 
   /* ---------------- plaza furniture: lamps, benches, planters ---------------- */
@@ -672,7 +685,7 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
     }
     return false;
   };
-  const finds = buildFinds(findSpots(layout, scenery.anchors, blockedAt), terrain, p);
+  const finds = buildFinds(WALK.keepsakes ? findSpots(layout, scenery.anchors, blockedAt) : [], terrain, p);
   root.add(finds.group);
 
   // Every other lit prop (the hub, the portal's frame and plinth) takes the same toon light.

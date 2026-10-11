@@ -22,7 +22,7 @@ import { checkInstance } from "../scripts/build-network.mjs";
 import { importCompanies, mergeCompanies, slugify } from "../scripts/import-csv.mjs";
 import { ROOT } from "../scripts/manifest.mjs";
 import { writeNewSite } from "../scripts/new-site.mjs";
-import { districtIcons, validateSite } from "../scripts/validate-site.mjs";
+import { SET_PIECE_KINDS, districtIcons, validateSite } from "../scripts/validate-site.mjs";
 import { Refused, guardedWrite, readJson } from "./site.mjs";
 
 /** What the server tells an assistant before its first call (MCP's instructions). */
@@ -338,7 +338,7 @@ export function builderTools(root = ROOT) {
       name: "update_site",
       title: "Change the map's settings",
       description:
-        "Changes site/site.json: the organization's name and website, the map's title, tagline, description, address, directory link and notice, the words the map uses (labels), the theme colors, and whether the network may show company descriptions. Fields left out stay as they are. Colors must pass their contrast checks.",
+        "Changes site/site.json: the organization's name and website, the map's title, tagline, description, address, directory link and notice, the words the map uses (labels), the theme colors, whether the network may show company descriptions, and which optional parts the walk world has (walk). Fields left out stay as they are. Colors must pass their contrast checks.",
       inputSchema: {
         type: "object",
         properties: {
@@ -361,11 +361,24 @@ export function builderTools(root = ROOT) {
             additionalProperties: false,
           },
           shareDescriptions: { type: "boolean", description: "Whether the network's search may show company descriptions." },
+          walk: {
+            type: "object",
+            description:
+              "The walk world's optional parts, each on unless set to false: village (the houses and street furniture around the plaza, with its fountain, stalls and props), setPieces (true, false, or a list of the kinds to stand on the coast and the hills), keepsakes (hidden for visitors to find), wildlife (gulls, butterflies, a balloon, a cat), sound (the sound button).",
+            properties: {
+              village: { type: "boolean" },
+              setPieces: { anyOf: [{ type: "boolean" }, { type: "array", items: { type: "string", enum: SET_PIECE_KINDS }, uniqueItems: true }] },
+              keepsakes: { type: "boolean" },
+              wildlife: { type: "boolean" },
+              sound: { type: "boolean" },
+            },
+            additionalProperties: false,
+          },
         },
         additionalProperties: false,
       },
       hints: { idempotent: true },
-      run: ({ org, map, labels, theme, shareDescriptions }) => {
+      run: ({ org, map, labels, theme, shareDescriptions, walk }) => {
         const site = readJson(root, "site/site.json");
         const next = {
           ...site,
@@ -374,9 +387,10 @@ export function builderTools(root = ROOT) {
           map: { ...site.map, ...map, ...(map?.url && isHttpsUrl(map.url) ? { url: normalizeUrl(map.url) } : {}) },
           labels: { ...site.labels, ...labels },
           theme: { ...site.theme, ...theme },
+          ...(walk || site.walk ? { walk: { ...site.walk, ...walk } } : {}),
         };
         const left = guardedWrite(root, { write: new Map([["site/site.json", next]]) }, "this change to site.json");
-        return { written: true, site: { org: next.org, map: next.map, labels: next.labels, theme: next.theme }, validation: summary(left) };
+        return { written: true, site: { org: next.org, map: next.map, labels: next.labels, theme: next.theme, walk: next.walk ?? {} }, validation: summary(left) };
       },
     },
     {

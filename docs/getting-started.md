@@ -45,6 +45,10 @@ logos and brand files. Then, in `site/`:
    named by slug. Leave the list empty and every people control disappears.
 6. **`brand/`**: your logo (`logo.svg`, and a light version for dark mode), an optional
    `favicon.svg|png` and `og.png` (1200 × 630, the link-preview image).
+7. **The walk world** (optional): it builds itself from your districts and companies. To leave a
+   part out (the village, some set pieces, the keepsakes, the animals, the sound), add a `walk`
+   block to `site.json`; to add a set piece of your own, see [walk-world.md](./walk-world.md).
+   Open `/?kit` to see every model it is made of.
 
 `npm run validate` tells you, in plain words, anything that breaks the contract.
 

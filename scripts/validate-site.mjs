@@ -28,6 +28,10 @@ import { ROOT, buildManifest } from "./manifest.mjs";
 
 /** The people area's slug in the walk world (src/data/layout.ts): no district may take it. */
 export const RESERVED_DISTRICT_SLUGS = ["people"];
+/** The walk world's set-piece kinds (PIECE_KINDS in src/views/walk/pieces.ts; pieces.test.ts keeps the two lists the same). */
+export const SET_PIECE_KINDS = ["lighthouse", "pier", "beach", "huts", "boathouse", "windmill", "farm", "camp", "tower", "orchard", "observatory", "greenhouse"];
+/** The walk world's parts a site can turn off (site.json walk; each is on unless set to false). */
+const WALK_SWITCHES = ["village", "keepsakes", "wildlife", "sound"];
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const LOGO_EXT = [".svg", ".png", ".webp", ".jpg", ".jpeg"];
 const HEADSHOT_EXT = [".webp", ".png", ".jpg", ".jpeg"];
@@ -125,7 +129,7 @@ export function validateSite(root = ROOT) {
   };
 
   /* ---------------- site.json ---------------- */
-  keysOnly(site, ["network", "org", "map", "labels", "theme", "live"], ["$schema"], "site.json");
+  keysOnly(site, ["network", "org", "map", "labels", "theme", "live"], ["$schema", "walk"], "site.json");
   if (isObj(site.network)) {
     keysOnly(site.network, ["id", "shareDescriptions"], [], "site.json network");
     if (typeof site.network.id !== "string" || !ID_PATTERN.test(site.network.id)) err('site.json network.id: lowercase letters, digits and hyphens, 2 to 48 characters (e.g. "acme-ventures")');
@@ -171,6 +175,20 @@ export function validateSite(root = ROOT) {
     keysOnly(site.live, ["enabled", "channel"], [], "site.json live");
     if (typeof site.live.enabled !== "boolean") err("site.json live.enabled: expected true or false");
     if (typeof site.live.channel !== "string" || !ID_PATTERN.test(site.live.channel)) err("site.json live.channel: lowercase letters, digits and hyphens");
+  }
+  if ("walk" in site) {
+    keysOnly(site.walk, [], [...WALK_SWITCHES, "setPieces"], "site.json walk");
+    if (isObj(site.walk)) {
+      for (const k of WALK_SWITCHES) if (k in site.walk && typeof site.walk[k] !== "boolean") err(`site.json walk.${k}: expected true or false`);
+      const pieces = site.walk.setPieces;
+      if (pieces !== undefined && typeof pieces !== "boolean") {
+        if (!Array.isArray(pieces)) err('site.json walk.setPieces: expected true, false or a list of kinds, like ["lighthouse", "orchard"]');
+        else {
+          for (const k of pieces) if (!SET_PIECE_KINDS.includes(k)) err(`site.json walk.setPieces: unknown kind ${JSON.stringify(k)}; the kinds are ${SET_PIECE_KINDS.join(", ")}`);
+          if (new Set(pieces).size !== pieces.length) err("site.json walk.setPieces: a kind is listed twice");
+        }
+      }
+    }
   }
 
   /* ---------------- taxonomy.json ---------------- */

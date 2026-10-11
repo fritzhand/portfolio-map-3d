@@ -237,6 +237,57 @@
           "description": "The Realtime channel's base name; production joins <channel>-v1, other builds <channel>-preview."
         }
       }
+    },
+    "walk": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The walk world's optional parts; each is on unless set to false (docs/walk-world.md).",
+      "properties": {
+        "village": {
+          "type": "boolean",
+          "description": "The houses, street lamps and bunting around the plaza, with the plaza's fountain, market stalls, ice-cream cart, kiosk and bike rack."
+        },
+        "setPieces": {
+          "description": "The set pieces on the coast and the hills between the districts: true for every kind, false for none, or a list of the kinds to use (src/views/walk/pieces.ts).",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "lighthouse",
+                  "pier",
+                  "beach",
+                  "huts",
+                  "boathouse",
+                  "windmill",
+                  "farm",
+                  "camp",
+                  "tower",
+                  "orchard",
+                  "observatory",
+                  "greenhouse"
+                ]
+              }
+            }
+          ]
+        },
+        "keepsakes": {
+          "type": "boolean",
+          "description": "Keepsakes hidden by the set pieces for visitors to find, and their counter."
+        },
+        "wildlife": {
+          "type": "boolean",
+          "description": "Gulls, butterflies, motes of light, a hot-air balloon and a cat."
+        },
+        "sound": {
+          "type": "boolean",
+          "description": "The sound button: the world's synthesized sound, off until a visitor turns it on."
+        }
+      }
     }
   }
 }

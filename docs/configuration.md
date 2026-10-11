@@ -23,6 +23,7 @@ build) checks them.
 | `theme.cta`, `theme.ctaText` | The call-to-action fill (Find a provider) and its text: 4.5:1 or more against each other. |
 | `theme.ink` | Your dark ink: label text, the dark plate for white-on-transparent logos. 7:1 or more on white. |
 | `live.enabled`, `live.channel` | Live explorers in the walk world ([live-explorers.md](./live-explorers.md)). |
+| `walk` (optional) | The walk world's optional parts, each on unless set to `false`: `village` (the houses and street furniture around the plaza), `setPieces` (`true`, `false` or a list of kinds, like `["lighthouse", "orchard"]`), `keepsakes`, `wildlife`, `sound`. See [walk-world.md](./walk-world.md). |
 
 The validator checks every contrast it names and explains how to fix one that fails.
 

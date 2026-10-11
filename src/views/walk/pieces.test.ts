@@ -6,6 +6,9 @@ import { readScenePalette } from "./palette";
 import { PIECES, PIECE_KINDS, type PieceModel } from "./pieces";
 import { COVE } from "./terrain";
 
+// scripts/validate-site.mjs is plain JavaScript without type declarations: import it untyped and say what it gives.
+const { SET_PIECE_KINDS } = (await import("../../../scripts/validate-site.mjs" as string)) as { SET_PIECE_KINDS: string[] };
+
 const p = readScenePalette();
 const build = (kind: (typeof PIECE_KINDS)[number]): PieceModel => PIECES[kind].build(p, seededRandom(hashString(kind)));
 
@@ -42,6 +45,10 @@ describe("PIECES", () => {
         for (let i = 0; i < pos.length; i++) expect(Number.isFinite(pos[i]), kind).toBe(true);
       }
     }
+  });
+
+  it("is the list of kinds site.json may name (scripts/validate-site.mjs)", () => {
+    expect(SET_PIECE_KINDS).toEqual(PIECE_KINDS);
   });
 
   it("is the same model on every build", () => {

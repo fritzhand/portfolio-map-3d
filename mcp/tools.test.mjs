@@ -205,6 +205,15 @@ describe("site settings", () => {
     expect(site.org.name).toBe("Example Collective");
   });
 
+  it("update_site turns the walk world's parts on and off, and keeps to the known set pieces", async () => {
+    const r = await call("update_site", { walk: { wildlife: false, setPieces: ["lighthouse", "orchard"] } });
+    expect(r.site.walk).toEqual({ wildlife: false, setPieces: ["lighthouse", "orchard"] });
+    await call("update_site", { walk: { sound: false } });
+    const site = JSON.parse(readFileSync(join(root, "site", "site.json"), "utf8"));
+    expect(site.walk).toEqual({ wildlife: false, setPieces: ["lighthouse", "orchard"], sound: false });
+    await expect(call("update_site", { walk: { setPieces: ["castle"] } })).rejects.toThrow(/walk\.setPieces: unknown kind "castle"/);
+  });
+
   it("create_site needs confirm, replaces the example, and protects a real map", async () => {
     await expect(call("create_site", { name: "Acme Ventures", url: "https://map.acme.vc" })).rejects.toBeInstanceOf(ToolInputError);
     const r = await call("create_site", { name: "Acme Ventures", url: "https://map.acme.vc/", website: "https://acme.vc", company: "startup", confirm: true });

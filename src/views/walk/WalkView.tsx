@@ -23,7 +23,7 @@ import { Component, useCallback, useEffect, useId, useLayoutEffect, useMemo, use
 import type { PerspectiveCamera } from "three";
 import { COMPANIES, PEOPLE, SITE, companyBySlug, districtBySlug, personBySlug } from "../../data/catalog";
 import { ARRIVED_FROM_NEXUS, NETWORK_NAME, NEXUS_HREF, PORTAL_HREF } from "../../network";
-import { L } from "../../site";
+import { L, WALK } from "../../site";
 import type { AreaSlug } from "../../data/layout";
 import type { DistrictSlug } from "../../data/types";
 import { getVisitor, onVisitorChange, rerollVisitor, type AvatarSpec, type Visitor } from "../../live/identity";
@@ -35,7 +35,7 @@ import SearchChip from "../../components/SearchChip";
 import { AdaptiveDpr, budgetDpr } from "../../three/adaptiveDpr";
 import { watchContext } from "../../three/contextWatch";
 import { areaBySlug, countLabel, isPeopleArea, walkAreas } from "./areas";
-import { FIND_KINDS, type FindProgress } from "./finds";
+import type { FindProgress } from "./finds";
 import { WalkEngine, isTextField, type Overlay, type PortalState } from "./engine";
 import { arrivalFly } from "./nav";
 import { prefersReducedMotion } from "./util";
@@ -302,8 +302,8 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
     }
   });
   const [mapOpen, setMapOpen] = useState(!narrow);
-  const [sound, setSound] = useState(() => readFlag(SOUND_KEY) === "1");
-  const [keeps, setKeeps] = useState<FindProgress>({ total: FIND_KINDS.length, found: [] });
+  const [sound, setSound] = useState(() => WALK.sound && readFlag(SOUND_KEY) === "1");
+  const [keeps, setKeeps] = useState<FindProgress>({ total: 0, found: [], hidden: [] });
   const [keepsOpen, setKeepsOpen] = useState(false);
   const [toast, setToast] = useState<{ text: string; key: number } | null>(null);
   const keepsId = useId();
@@ -598,12 +598,12 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
               <CircleHelp size={18} aria-hidden="true" />
             </button>
           )}
-          {!intro && (
+          {!intro && WALK.sound && (
             <button type="button" className="walk-icon-btn" aria-pressed={sound} onClick={toggleSound} aria-label={sound ? "Turn the sound off" : "Turn the sound on"} title={sound ? "Sound on" : "Sound off"}>
               {sound ? <Volume2 size={18} aria-hidden="true" /> : <VolumeX size={18} aria-hidden="true" />}
             </button>
           )}
-          {!intro && (
+          {!intro && keeps.total > 0 && (
             <button
               type="button"
               className="walk-pill walk-keepsakes"
@@ -623,11 +623,11 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
             </button>
           )}
         </div>
-        {keepsOpen && !intro && (
+        {keepsOpen && !intro && keeps.total > 0 && (
           <section className="walk-card walk-pop walk-keeps-pop" id={keepsId} aria-label="Keepsakes">
             <h3 className="walk-pop-h">Keepsakes hidden around the island</h3>
             <ul className="walk-keeps-list">
-              {FIND_KINDS.map((k) => {
+              {keeps.hidden.map((k) => {
                 const got = keeps.found.includes(k.id);
                 return (
                   <li key={k.id} className={got ? "is-found" : undefined}>
@@ -943,7 +943,7 @@ function IntroCard({ onClose }: { onClose: () => void }) {
           <div><dt>Turn</dt><dd>Drag or <kbd>Q</kbd> / <kbd>E</kbd></dd></div>
           <div><dt>Zoom</dt><dd>Scroll or <kbd>+</kbd> / <kbd>-</kbd></dd></div>
           <div><dt>Open nearby</dt><dd><kbd>Enter</kbd></dd></div>
-          <div><dt>Keepsakes</dt><dd>Five are hidden: find them by wandering</dd></div>
+          {WALK.keepsakes && <div><dt>Keepsakes</dt><dd>A few are hidden: find them by wandering</dd></div>}
         </dl>
         <dl className="walk-touch-controls">
           <div><dt>Walk</dt><dd>Drag or hold arrows</dd></div>

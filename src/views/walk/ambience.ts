@@ -1,5 +1,5 @@
 /* The walk world's sound, made on the spot with the Web Audio API (no audio files, nothing
-   fetched): a breeze, cicadas on a summer afternoon (crickets by moonlight), the sea when the
+   fetched): a breeze, cicadas by day (crickets by moonlight), the sea when the
    walker is near the coast, now and then a bird, and footsteps that change with the ground (a
    dry tap on the road, a soft brush on grass).
 

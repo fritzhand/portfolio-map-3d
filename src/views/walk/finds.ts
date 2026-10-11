@@ -11,7 +11,8 @@
 import * as THREE from "three";
 import { hashString, seededRandom, type WorldLayout } from "../../data/layout";
 import { cpuCanvas } from "../../three/cpuCanvas";
-import type { Anchor, PieceKind } from "./scenery";
+import { PIECES, type PieceKind } from "./pieces";
+import type { Anchor } from "./scenery";
 import type { ScenePalette } from "./palette";
 import type { Terrain } from "./terrain";
 import { clamp } from "./util";
@@ -37,6 +38,8 @@ export interface FindSpot {
   id: string;
   x: number;
   z: number;
+  /** The set piece it hides beside: its own, or another when the island has none of its own (null: out on the hills). */
+  near: PieceKind | null;
 }
 
 /** What blocks a spot: anything that returns true makes it unusable (a collider, a house, the sea). */
@@ -68,7 +71,7 @@ export function findSpots(layout: WorldLayout, anchors: readonly Anchor[], block
       }
       if (blocked(x, z)) continue;
       if (out.some((o) => Math.hypot(o.x - x, o.z - z) < 8)) continue;
-      out.push({ id: kind.id, x, z });
+      out.push({ id: kind.id, x, z, near: home ? home.kind : null });
       return;
     }
   });
@@ -98,6 +101,16 @@ function saveFound(found: Set<string>): void {
 export interface FindProgress {
   total: number;
   found: string[];
+  /** The keepsakes hidden on this island, and what the list says about each until it is found. */
+  hidden: { id: string; name: string; hint: string }[];
+}
+
+/** What the list says about a keepsake not yet found: its own hint beside its own set piece, otherwise where it really is. */
+export function findHint(kind: FindKind, spot: FindSpot): string {
+  if (spot.near === kind.near) return kind.hint;
+  if (!spot.near) return "Somewhere out on the hills.";
+  const title = PIECES[spot.near].title;
+  return `Somewhere near ${title.charAt(0).toLowerCase()}${title.slice(1)}.`;
 }
 
 /** A soft golden glow for behind a find (CPU canvas). */
@@ -151,7 +164,14 @@ export function buildFinds(spots: readonly FindSpot[], terrain: Pick<Terrain, "h
   return {
     group,
     spots,
-    progress: () => ({ total: FIND_KINDS.length, found: [...found] }),
+    progress: () => ({
+      total: spots.length,
+      found: [...found].filter((id) => spots.some((s) => s.id === id)),
+      hidden: spots.flatMap((s) => {
+        const kind = FIND_KINDS.find((k) => k.id === s.id);
+        return kind ? [{ id: kind.id, name: kind.name, hint: findHint(kind, s) }] : [];
+      }),
+    }),
     update(time, dt, reduced, walker) {
       let got: FindKind | null = null;
       for (const it of items) {

@@ -1,4 +1,4 @@
-/* The village's houses: six hand-built, painted buildings in the same low-poly summer style, each
+/* The village's houses: six hand-built, painted buildings in the same low-poly style, each
    a list of faceted parts (kit.ts) in the building's own frame (its front toward +z, its origin
    at the center of the footprint on the ground). The village (village.ts) turns each toward the
    plaza, merges them into a few draw calls, and gives each a box collider from its footprint.
