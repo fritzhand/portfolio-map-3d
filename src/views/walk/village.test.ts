@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { COMPANIES, DISTRICTS, PEOPLE } from "../../data/catalog";
 import type { Company, DistrictSlug } from "../../data/types";
 import { PLAZA_RADIUS, ROAD_WIDTH, VILLAGE, layoutWorld, onRoad } from "../../data/layout";
-import { HOUSE_LOT, lotsFor, ringLampAngles } from "./village";
+import { HOUSE_LOT, PLAZA_PROP, lotsFor, plazaProps, plazaRoom, ringLampAngles } from "./village";
 
 const real = layoutWorld(
   DISTRICTS.map((d) => d.slug),
@@ -113,4 +113,29 @@ describe("ringLampAngles", () => {
       }
     }
   });
+});
+
+describe("plazaProps", () => {
+  it("stands the ice-cream cart, the kiosk and the bike rack on the example's plaza", () => {
+    expect(plazaProps(real).map((p) => p.kind)).toEqual(["cart", "kiosk", "bikes"]);
+  });
+
+  it("is the same on every visit", () => {
+    expect(plazaProps(real)).toEqual(plazaProps(real));
+  });
+
+  for (const [name, layout] of Object.entries(worlds)) {
+    it(`keeps every prop clear of the building, the roads, the walks from the spawn and each other (${name})`, () => {
+      const props = plazaProps(layout);
+      props.forEach((prop, i) => {
+        const r = Math.hypot(PLAZA_PROP[prop.kind].hx, PLAZA_PROP[prop.kind].hz);
+        const others = props.filter((_, k) => k !== i).map((o) => ({ x: o.x, z: o.z, r: Math.hypot(PLAZA_PROP[o.kind].hx, PLAZA_PROP[o.kind].hz) }));
+        expect(plazaRoom(layout, prop.x, prop.z, r, others)).toBeGreaterThan(0);
+        // Its front faces the spawn.
+        const s = layout.spawn;
+        const d = Math.hypot(s.x - prop.x, s.z - prop.z);
+        expect(Math.sin(prop.yaw) * (s.x - prop.x) + Math.cos(prop.yaw) * (s.z - prop.z)).toBeCloseTo(d, 6);
+      });
+    });
+  }
 });

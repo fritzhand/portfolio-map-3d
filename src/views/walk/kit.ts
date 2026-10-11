@@ -82,6 +82,29 @@ export function bar(a: THREE.Vector3, b: THREE.Vector3, thick: number, color: TH
   return paint(g, color);
 }
 
+/** A part turned inside out: its triangles face the other way, so it is seen from within (the inside of a boat or a bowl). */
+export function inside(g: Part): Part {
+  const pos = g.attributes.position as THREE.BufferAttribute;
+  const col = g.attributes.color as THREE.BufferAttribute | undefined;
+  for (let i = 0; i + 2 < pos.count; i += 3) {
+    for (const a of col ? [pos, col] : [pos]) {
+      const x = a.getX(i + 1);
+      const y = a.getY(i + 1);
+      const z = a.getZ(i + 1);
+      a.setXYZ(i + 1, a.getX(i + 2), a.getY(i + 2), a.getZ(i + 2));
+      a.setXYZ(i + 2, x, y, z);
+    }
+  }
+  g.computeVertexNormals();
+  return g;
+}
+
+/** A small boat's hull: a long, faceted shell with a rim along its gunwale, its keel at y 0 and its bow toward +z. */
+export function hull(len: number, wide: number, color: THREE.Color, trim: THREE.Color): Part[] {
+  const g = new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2).scale(wide / 2, 0.55, len / 2).translate(0, 0.5, 0);
+  return [paint(g, color), box(wide * 0.8, 0.07, len * 0.7, 0, 0.5, 0, trim)];
+}
+
 /** Corners of a flat quad as two triangles, facing the way a-b-c turns counter-clockwise. */
 function quad(out: number[], a: number[], b: number[], c: number[], d: number[]): void {
   out.push(...a, ...b, ...c, ...a, ...c, ...d);

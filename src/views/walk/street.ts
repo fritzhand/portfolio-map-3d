@@ -1,13 +1,17 @@
 /* Street furniture and set-dressing parts, in the same painted low-poly style as the houses: lamp
    posts with a curved arm and a hooded lamp, a bus shelter, a picnic table under a parasol, a
-   mailbox, a fire hydrant, a trash can, a picket fence, a signpost, a haystack, wire strung between
-   posts. Each is a list of faceted parts (kit.ts) in its own frame (y up, standing on y = 0).
+   mailbox, a fire hydrant, a trash can, a picket fence, a haystack, wire strung between posts, the
+   plaza's fountain and market stalls, an ice-cream cart, a newsstand kiosk, a bike rack with
+   bicycles. Each is a list of faceted parts (kit.ts) in its own frame (y up, standing on y = 0).
    Parts that repeat a lot (lamp posts) come as two lists, the iron and the glass, so the village
    can instance them; the rest are merged where they stand. */
 import * as THREE from "three";
-import { ball, bar, blend, box, cyl, pyramid, tone, type Part } from "./kit";
+import { ball, bar, blend, box, cyl, pyramid, tone, tri, type Part } from "./kit";
 import type { ScenePalette } from "./palette";
 import { paint } from "./util";
+
+const WHITE = new THREE.Color("#ffffff");
+const v = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 
 /** The lamp post's wire attachment, in its own frame: where the post's crossbar carries two wires. */
 export const LAMP_WIRE_Y = 6.15;
@@ -129,14 +133,6 @@ export function fence(len: number, p: ScenePalette): Part[] {
   return parts;
 }
 
-/** A signpost with two arrow boards (blank, in the flag color and cream): at crossroads. */
-export function signPost(p: ScenePalette): Part[] {
-  const parts: Part[] = [cyl(0.07, 0.09, 3.0, 5, 0, 0, 0, p.trunk)];
-  parts.push(box(1.7, 0.4, 0.07, 0.35, 2.4, 0.08, blend(p.wallCream, p.flag, 0.25)));
-  parts.push(box(1.5, 0.4, 0.07, -0.3, 1.85, -0.08, blend(p.wallCream, p.roofSlate, 0.2)));
-  return parts;
-}
-
 /** A conical haystack with a rounded top and a hay bale beside it. */
 export function haystack(p: ScenePalette): Part[] {
   const hay = blend(p.sand, p.flag, 0.35);
@@ -186,5 +182,104 @@ export function stall(p: ScenePalette, tint: THREE.Color): Part[] {
     parts.push(box(0.8, 0.28, 0.6, -1.4 + i * 0.95, 1.0, 0.5, tone(wood, 0.8)));
     for (let k = 0; k < 4; k++) parts.push(ball(0.15, -1.4 + i * 0.95 + (k % 2) * 0.3 - 0.15, 1.35, 0.5 + (k >> 1) * 0.25 - 0.12, fruit[i % fruit.length], 0.9));
   }
+  return parts;
+}
+
+/** A striped parasol: `n` segments around a pole's top at (x, y, z), alternating two colors. */
+function parasol(r: number, x: number, y: number, z: number, a: THREE.Color, b: THREE.Color, n = 8): Part[] {
+  const out: Part[] = [];
+  for (let i = 0; i < n; i++) {
+    const g = new THREE.ConeGeometry(r, r * 0.4, 1, 1, false, (i / n) * Math.PI * 2, (Math.PI * 2) / n).translate(x, y + r * 0.2, z);
+    out.push(paint(g, i % 2 ? a : b));
+  }
+  return out;
+}
+
+/** An ice-cream cart: a cream body on two wheels with a colored band, cones on the counter, a push handle and a striped parasol. Faces +z. */
+export function iceCreamCart(p: ScenePalette): Part[] {
+  const cream = blend(p.wallCream, WHITE, 0.55);
+  const band = p.roofRose;
+  const iron = blend(p.navy, p.ink, 0.45);
+  const parts: Part[] = [box(1.9, 0.9, 1.0, 0, 0.45, 0, cream, { bottom: 0.9, top: 1.04 }), box(1.92, 0.22, 1.02, 0, 1.0, 0, band), box(2.0, 0.08, 1.1, 0, 1.35, 0, tone(cream, 1.04))];
+  // Two wheels at one end, a stand at the other, the push handle.
+  for (const z of [-0.54, 0.54]) {
+    parts.push(paint(new THREE.CylinderGeometry(0.42, 0.42, 0.08, 12).rotateX(Math.PI / 2).translate(-0.5, 0.42, z), tone(p.ink, 1.5)));
+    parts.push(paint(new THREE.CylinderGeometry(0.1, 0.1, 0.1, 6).rotateX(Math.PI / 2).translate(-0.5, 0.42, z * 1.06), iron));
+  }
+  for (const z of [-0.4, 0.4]) parts.push(box(0.08, 0.45, 0.08, 0.8, 0, z, iron));
+  for (const z of [-0.36, 0.36]) parts.push(bar(v(0.95, 1.15, z), v(1.45, 1.3, z), 0.06, iron));
+  parts.push(bar(v(1.45, 1.3, -0.42), v(1.45, 1.3, 0.42), 0.07, tone(p.ink, 1.6)));
+  // A cone and a scoop painted on the front.
+  parts.push(tri(v(-0.13, 0.76, 0.52), v(0, 0.5, 0.52), v(0.13, 0.76, 0.52), p.flag), paint(new THREE.CircleGeometry(0.14, 10).translate(0, 0.83, 0.521), p.roofCoral));
+  // Three cones on the counter, the parasol over it.
+  const scoops = [p.roofCoral, p.windowLight, p.flag];
+  scoops.forEach((c, i) => parts.push(cyl(0.07, 0.0, 0.22, 6, -0.55 + i * 0.28, 1.43, 0.28, blend(p.flag, p.trunk, 0.45)), ball(0.09, -0.55 + i * 0.28, 1.72, 0.28, c)));
+  parts.push(cyl(0.035, 0.035, 1.75, 4, 0.2, 1.39, 0, tone(p.concrete, 0.9)));
+  parts.push(...parasol(1.25, 0.2, 3.1, 0, band, blend(band, p.cloud, 0.8)));
+  return parts;
+}
+
+/** A newsstand kiosk: a green booth with white corners, a counter window under a striped awning, magazines on the ledge, a rack of papers on one side, a hip roof. Faces +z. */
+export function kiosk(p: ScenePalette): Part[] {
+  const green = blend(p.shutter, p.tree, 0.35);
+  const white = blend(p.wallCream, WHITE, 0.6);
+  const parts: Part[] = [
+    box(2.6, 0.12, 2.2, 0, 0, 0, tone(p.concrete, 1.05)),
+    box(2.2, 2.5, 1.8, 0, 0.12, 0, green, { bottom: 0.85, top: 1.05 }),
+    box(2.3, 0.16, 1.9, 0, 0.12, 0, tone(green, 0.75)),
+    box(2.36, 0.22, 1.96, 0, 2.62, 0, white),
+  ];
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) parts.push(box(0.12, 2.5, 0.12, sx * 1.1, 0.12, sz * 0.9, white));
+  // The window and its ledge, with magazines standing on it.
+  parts.push(box(1.6, 1.0, 0.06, 0, 1.15, 0.91, tone(p.window, 0.75)), box(1.8, 0.08, 0.4, 0, 1.1, 1.05, white));
+  const covers = [p.roofCoral, p.windowLight, p.flag, p.roofRose, p.shutter];
+  covers.forEach((c, i) => parts.push(box(0.26, 0.34, 0.03, -0.62 + i * 0.31, 1.18, 1.12, c)));
+  const n = 8;
+  for (let i = 0; i < n; i++) {
+    const g = new THREE.BoxGeometry(2.0 / n, 0.06, 0.7).rotateX(0.45).translate(-1.0 + (2.0 * (i + 0.5)) / n, 2.3, 1.18);
+    parts.push(paint(g, i % 2 ? p.awning : blend(p.awning, p.cloud, 0.8)));
+  }
+  // A rack of folded papers on the right side.
+  parts.push(box(0.3, 0.95, 1.2, 1.25, 0.3, 0, tone(green, 0.85)));
+  for (let k = 0; k < 3; k++) parts.push(box(0.04, 0.24, 1.0, 1.42, 0.45 + k * 0.28, 0, k % 2 ? white : tone(white, 0.9)));
+  parts.push(pyramid(2.8, 2.4, 0.9, 0, 2.84, 0, p.roofSlate), ball(0.14, 0, 3.8, 0, p.flag));
+  return parts;
+}
+
+/** A bicycle along z (its front wheel toward +z), standing on y = 0. */
+function bicycle(frame: THREE.Color, p: ScenePalette): Part[] {
+  const tire = tone(p.ink, 1.3);
+  const R = 0.34;
+  const wheel = (z: number) => paint(new THREE.TorusGeometry(R, 0.04, 5, 16).rotateY(Math.PI / 2).translate(0, R, z), tire);
+  const rear = v(0, R, -0.52);
+  const front = v(0, R, 0.52);
+  const crank = v(0, 0.36, -0.02);
+  const seat = v(0, 0.86, -0.2);
+  const head = v(0, 0.86, 0.36);
+  return [
+    wheel(-0.52),
+    wheel(0.52),
+    bar(rear, seat, 0.045, frame),
+    bar(rear, crank, 0.045, frame),
+    bar(crank, seat, 0.05, frame),
+    bar(seat, head, 0.05, frame),
+    bar(crank, head, 0.05, frame),
+    bar(head, front, 0.045, frame),
+    bar(head, v(0, 1.02, 0.4), 0.045, frame),
+    bar(v(-0.24, 1.02, 0.4), v(0.24, 1.02, 0.4), 0.04, tone(p.ink, 1.5)),
+    box(0.12, 0.05, 0.24, 0, 0.87, -0.22, tone(p.ink, 1.4)),
+  ];
+}
+
+/** A bike rack: four steel hoops in a row along x on a paved pad, three bicycles parked in it. */
+export function bikeRack(p: ScenePalette): Part[] {
+  const steel = blend(p.navy, p.concrete, 0.45);
+  const parts: Part[] = [box(4.2, 0.06, 2.0, 0, 0, 0, tone(p.concrete, 1.05))];
+  for (let i = 0; i < 4; i++) {
+    const x = -1.5 + i;
+    parts.push(box(0.06, 0.78, 0.06, x, 0, -0.32, steel), box(0.06, 0.78, 0.06, x, 0, 0.32, steel), box(0.06, 0.06, 0.7, x, 0.78, 0, steel));
+  }
+  const frames = [p.roofRose, p.shutter, p.flag];
+  [0, 1, 3].forEach((slot, k) => parts.push(...bicycle(frames[k], p).map((g) => g.translate(-1.5 + slot + 0.17, 0, 0.05))));
   return parts;
 }

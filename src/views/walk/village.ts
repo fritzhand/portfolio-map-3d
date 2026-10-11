@@ -10,12 +10,14 @@
    needs: walking colliders, boxes for the houses, blockers for the follow camera and spots for
    plants. Everything is built once per mount and disposed with the world. */
 import * as THREE from "three";
+import { HUB_CENTER, PORTAL, hubClearance, plazaLamps, plazaSeats, roadDistance } from "../../data/hub";
 import { ROAD_WIDTH, VILLAGE, PLAZA_RADIUS, seededRandom, hashString, type WorldLayout } from "../../data/layout";
 import { HOUSE_KINDS, buildHouse, type HouseKind } from "./houses";
 import { box, blend, type Part } from "./kit";
 import type { ScenePalette } from "./palette";
-import { fence, fountain, hydrant, lampPost, LAMP_HEIGHT, LAMP_WIRE_SPREAD, LAMP_WIRE_Y, mailbox, picnic, busStop, stall, stoneWall, trashCan, wire } from "./street";
+import { bikeRack, fence, fountain, hydrant, iceCreamCart, kiosk, lampPost, LAMP_HEIGHT, LAMP_WIRE_SPREAD, LAMP_WIRE_Y, mailbox, picnic, busStop, stall, stoneWall, trashCan, wire } from "./street";
 import { merge, paint } from "./util";
+import { directoryFor, fingerposts } from "./wayfinding";
 import type { BoxCollider, Collider } from "./world";
 
 /** The footprint each kind's lot is cut for (its widest and deepest build), in world units. */
@@ -112,6 +114,94 @@ export function ringLampAngles(layout: WorldLayout, spacing = 13.5): number[] {
     const a = (i / n) * TAU + 0.05;
     if (roads.some((road) => Math.abs(wrap(a - road)) < clear)) continue;
     out.push(a);
+  }
+  return out;
+}
+
+/* ---------------- the plaza's fixtures and props ---------------- */
+
+/** The fountain, and the four market stalls facing the hub. */
+export const FOUNTAIN = { x: -19, z: 17, r: 3.5 } as const;
+export const STALLS: readonly { x: number; z: number; yaw: number }[] = [
+  { x: -30, z: 2, yaw: Math.PI / 2 - 0.35 },
+  { x: -30, z: -12, yaw: Math.PI / 2 - 0.1 },
+  { x: 30, z: 3, yaw: -Math.PI / 2 + 0.35 },
+  { x: 30, z: -12, yaw: -Math.PI / 2 + 0.1 },
+];
+
+export type PlazaPropKind = "cart" | "kiosk" | "bikes";
+
+/** Each prop's half footprint (its box collider) and height. */
+export const PLAZA_PROP: Record<PlazaPropKind, { hx: number; hz: number; h: number }> = {
+  cart: { hx: 1.1, hz: 0.6, h: 3.6 },
+  kiosk: { hx: 1.5, hz: 1.3, h: 3.9 },
+  bikes: { hx: 2.1, hz: 1.0, h: 1.1 },
+};
+
+/** Where each prop would like to stand, best first: it takes the first spot that is clear. */
+const PROP_SPOTS: Record<PlazaPropKind, readonly (readonly [number, number])[]> = {
+  cart: [[-30, 16], [30, 16], [-36, -5], [36, -5], [-15, -29]],
+  kiosk: [[27, 16], [-27, 16], [36, -5], [-36, -5], [15, -29]],
+  bikes: [[-15, -29], [15, -29], [-36, -5], [36, -5]],
+};
+
+export interface PlazaProp {
+  kind: PlazaPropKind;
+  x: number;
+  z: number;
+  /** Three.js rotation.y: the prop's front (+z) toward the spawn, so an arrival sees it. */
+  yaw: number;
+}
+
+/** How far (x, z) is from the segment a-b. */
+function segmentDistance(x: number, z: number, ax: number, az: number, bx: number, bz: number): number {
+  const dx = bx - ax;
+  const dz = bz - az;
+  const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(x - (ax + dx * t), z - (az + dz * t));
+}
+
+/**
+ * How much room a prop of radius r has at (x, z): negative when it would stand on the building,
+ * the portal, a road, the spawn or a walk from it (to each road's mouth and to the building), the
+ * fountain, a stall, a lamp, a seat, a fingerpost, the Walking times board or anything in `also`.
+ */
+export function plazaRoom(layout: WorldLayout, x: number, z: number, r: number, also: readonly { x: number; z: number; r: number }[] = []): number {
+  const s = layout.spawn;
+  const dir = directoryFor(layout);
+  const taken = [
+    FOUNTAIN,
+    ...STALLS.map((t) => ({ x: t.x, z: t.z, r: 2.2 })),
+    { x: PORTAL.x, z: PORTAL.z, r: PORTAL.r + 1 },
+    { x: dir.x, z: dir.z, r: 2.2 },
+    ...plazaLamps(layout).map((l) => ({ x: l.x, z: l.z, r: 0.4 })),
+    ...plazaSeats(layout).map((l) => ({ x: l.x, z: l.z, r: 1.2 })),
+    ...fingerposts(layout).map((f) => ({ x: f.x, z: f.z, r: 0.6 })),
+    ...also,
+  ];
+  const ends = [...layout.discs.map((d) => ({ x: Math.cos(d.angle) * PLAZA_RADIUS, z: Math.sin(d.angle) * PLAZA_RADIUS })), HUB_CENTER];
+  return Math.min(
+    PLAZA_RADIUS - 6 - Math.hypot(x, z) - r,
+    hubClearance(x, z) - r - 2,
+    roadDistance(layout, x, z) - ROAD_WIDTH / 2 - r - 1,
+    Math.hypot(x - s.x, z - s.z) - r - 7,
+    ...ends.map((e) => segmentDistance(x, z, s.x, s.z, e.x, e.z) - r - 1.5),
+    ...taken.map((t) => Math.hypot(x - t.x, z - t.z) - t.r - r - 1.5),
+  );
+}
+
+/** Where the ice-cream cart, the kiosk and the bike rack stand: each at its first spot with room (plazaRoom), or not at all. Deterministic, and pure. */
+export function plazaProps(layout: WorldLayout): PlazaProp[] {
+  const s = layout.spawn;
+  const out: PlazaProp[] = [];
+  const placed: { x: number; z: number; r: number }[] = [];
+  for (const kind of ["cart", "kiosk", "bikes"] as const) {
+    const r = Math.hypot(PLAZA_PROP[kind].hx, PLAZA_PROP[kind].hz);
+    const spot = PROP_SPOTS[kind].find(([x, z]) => plazaRoom(layout, x, z, r, placed) > 0);
+    if (!spot) continue;
+    const [x, z] = spot;
+    out.push({ kind, x, z, yaw: Math.atan2(s.x - x, s.z - z) });
+    placed.push({ x, z, r });
   }
   return out;
 }
@@ -246,20 +336,21 @@ export function buildVillage(
     for (const side of [-1, 1]) plants.push({ kind: "cypress", x: ux * (VILLAGE.outer + 2.5) + nx * side * (ROAD_WIDTH / 2 + 3.2), z: uz * (VILLAGE.outer + 2.5) + nz * side * (ROAD_WIDTH / 2 + 3.2), s: 1.1 + rand() * 0.2 });
   }
 
-  /* ---------------- the plaza: a fountain, and market stalls facing the hub ---------------- */
+  /* ---------------- the plaza: a fountain, market stalls facing the hub, an ice-cream cart, a kiosk, bicycles ---------------- */
   {
-    stand(dressing, fountain(p), -19, 17, 0);
-    colliders.push({ x: -19, z: 17, r: 3.5, h: 3.4 });
-    blockers.push({ x: -19, z: 17, r: 3.6, h: 4.6 });
-    const stalls: [number, number, number, THREE.Color][] = [
-      [-30, 2, Math.PI / 2 - 0.35, p.awning],
-      [-30, -12, Math.PI / 2 - 0.1, p.flag],
-      [30, 3, -Math.PI / 2 + 0.35, p.shutter],
-      [30, -12, -Math.PI / 2 + 0.1, p.roofRose],
-    ];
-    for (const [x, z, yaw, tint] of stalls) {
-      stand(dressing, stall(p, tint), x, z, yaw);
-      boxes.push({ x, z: z, hx: 2.0, hz: 0.9, rot: yaw, h: 2.9 });
+    stand(dressing, fountain(p), FOUNTAIN.x, FOUNTAIN.z, 0);
+    colliders.push({ x: FOUNTAIN.x, z: FOUNTAIN.z, r: FOUNTAIN.r, h: 3.4 });
+    blockers.push({ x: FOUNTAIN.x, z: FOUNTAIN.z, r: FOUNTAIN.r + 0.1, h: 4.6 });
+    const tints = [p.awning, p.flag, p.shutter, p.roofRose];
+    STALLS.forEach(({ x, z, yaw }, i) => {
+      stand(dressing, stall(p, tints[i % tints.length]), x, z, yaw);
+      boxes.push({ x, z, hx: 2.0, hz: 0.9, rot: yaw, h: 2.9 });
+    });
+    for (const prop of plazaProps(layout)) {
+      const parts = prop.kind === "cart" ? iceCreamCart(p) : prop.kind === "kiosk" ? kiosk(p) : bikeRack(p);
+      stand(dressing, parts, prop.x, prop.z, prop.yaw);
+      const { hx, hz, h } = PLAZA_PROP[prop.kind];
+      boxes.push({ x: prop.x, z: prop.z, hx, hz, rot: prop.yaw, h });
     }
   }
 

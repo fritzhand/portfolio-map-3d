@@ -185,6 +185,17 @@ export function onRoad(layout: WorldLayout, x: number, z: number, pad = 0): bool
   return false;
 }
 
+/** The middle of each wedge between neighboring districts (angles, radians): where the walk world's set pieces stand. */
+export function wedgeAngles(layout: WorldLayout): number[] {
+  const a = layout.discs.map((d) => d.angle).sort((x, y) => x - y);
+  if (a.length === 0) return [];
+  if (a.length === 1) return [a[0] + Math.PI];
+  return a.map((v, i) => {
+    const next = i + 1 < a.length ? a[i + 1] : a[0] + Math.PI * 2;
+    return (v + next) / 2;
+  });
+}
+
 /** Deterministic scatter points for trees/rocks: on land, off roads, out of districts and the plaza. */
 export function decorPoints(layout: WorldLayout, count: number, seed = 1): { x: number; z: number; s: number; k: number }[] {
   const rand = seededRandom(seed);

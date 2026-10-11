@@ -140,6 +140,45 @@ export function buildWorld(layout: WorldLayout, districts: readonly AreaLook[], 
   return world;
 }
 
+/**
+ * The walk world's light (and the kit gallery's, ?kit): the sky's hemisphere light, cool in the
+ * shadows, and the low sun (the moon in the dark theme), which casts the shadows. No tone mapping
+ * (the canvas is flat): by day a lit face shows about its own color, a shadowed one about half of it,
+ * tinted by the sky. By moonlight the palette's colors are already the night's (scene-theme.css), so
+ * the sky light is the moon's pale blue rather than the dark sky's, which would darken them twice.
+ */
+export function sceneLights(p: ScenePalette, coarse: boolean): { hemi: THREE.HemisphereLight; sun: THREE.DirectionalLight } {
+  const hemi = p.dark
+    ? new THREE.HemisphereLight(mix(p.sun, p.glow, 0.3), mix(p.grass, p.sand, 0.45), 2.4)
+    : new THREE.HemisphereLight(mix(p.skyMid, p.skyBottom, 0.45), mix(p.grass, p.sand, 0.45), 1.95);
+  const sun = new THREE.DirectionalLight(p.sun, p.dark ? 1.5 : 1.45);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
+  sun.shadow.camera.near = 1;
+  sun.shadow.camera.far = 220;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.04;
+  return { hemi, sun };
+}
+
+/**
+ * The materials the kit's parts are drawn with (kit.ts, houses, street furniture, set pieces), as
+ * factories: vertex-colored, flat-shaded toon-lit props; lamp glass, frosted by day and lit (unlit,
+ * its own color) by moonlight; glazing you can see through, a pale sky tint by day and lit from
+ * inside by moonlight; unlit flames in their own colors. With `nearFade`, lit ones dissolve near the lens.
+ */
+export function kitMaterials(p: ScenePalette, toon: ToonShared, nearFade?: { value: THREE.Vector2 }) {
+  return {
+    prop: () => toonMaterial({ vertexColors: true, flatShading: true }, { shared: toon, nearFade }),
+    glass: (): THREE.Material => (p.dark ? new THREE.MeshBasicMaterial({ color: p.lampGlass, toneMapped: false }) : toonMaterial({ color: p.lampGlass }, { shared: toon, nearFade })),
+    panes: (): THREE.Material =>
+      p.dark
+        ? new THREE.MeshBasicMaterial({ color: p.windowLight, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false, toneMapped: false })
+        : toonMaterial({ color: mix(p.windowLight, "#ffffff", 0.35), transparent: true, opacity: 0.42, side: THREE.DoubleSide, depthWrite: false }, { shared: toon, nearFade }),
+    lit: () => new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }),
+  };
+}
+
 function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], terrain: Terrain, p: ScenePalette, toon: ToonShared): Omit<World, "setPalette"> {
   const root = new THREE.Group();
   root.name = "world";
@@ -154,10 +193,9 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   const arches: Collider[] = [];
   const districtBy = new Map(districts.map((d) => [d.slug, d]));
   const nearFade = { value: new THREE.Vector2(0, 0) };
-  /** Vertex-colored, flat-shaded, toon-lit props that dissolve near the camera. */
-  const propMaterial = () => own(toonMaterial({ vertexColors: true, flatShading: true }, { shared: toon, nearFade }));
-  /** Lamp globes: frosted by day, lit (unlit material, its own color) by moonlight. */
-  const glassMaterial = own(p.dark ? new THREE.MeshBasicMaterial({ color: p.lampGlass, toneMapped: false }) : toonMaterial({ color: p.lampGlass }, { shared: toon, nearFade }));
+  const kit = kitMaterials(p, toon, nearFade);
+  const propMaterial = () => own(kit.prop());
+  const glassMaterial = own(kit.glass());
   const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 
   /* ---------------- sky (it travels with the camera) and light ---------------- */
@@ -165,22 +203,8 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   const sky = buildSky(p, sunDir);
   root.add(sky.mesh);
 
-  // No tone mapping in this scene (the canvas is flat): by day a lit face shows about its own color,
-  // a shadowed one about half of it, tinted by the cool sky. By moonlight the palette's colors are
-  // already the night's (scene-theme.css), so the sky light is the moon's pale blue rather than the
-  // dark sky's, which would darken them twice.
-  const hemi = p.dark
-    ? new THREE.HemisphereLight(mix(p.sun, p.glow, 0.3), mix(p.grass, p.sand, 0.45), 2.4)
-    : new THREE.HemisphereLight(mix(p.skyMid, p.skyBottom, 0.45), mix(p.grass, p.sand, 0.45), 1.95);
-  root.add(hemi);
-  const sun = new THREE.DirectionalLight(p.sun, p.dark ? 1.5 : 1.45);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-  sun.shadow.camera.near = 1;
-  sun.shadow.camera.far = 220;
-  sun.shadow.bias = -0.0004;
-  sun.shadow.normalBias = 0.04;
-  root.add(sun, sun.target);
+  const { hemi, sun } = sceneLights(p, coarse);
+  root.add(hemi, sun, sun.target);
 
   /* ---------------- island ground and the seabed around it ---------------- */
   {
@@ -473,7 +497,8 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   const scenery = buildScenery(layout, terrain, p, own, {
     prop: propMaterial,
     glass: glassMaterial,
-    lit: own(new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })),
+    panes: own(kit.panes()),
+    lit: own(kit.lit()),
   });
   root.add(scenery.group);
   colliders.push(...scenery.colliders);
@@ -563,6 +588,8 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
       const a = Math.atan2(it.z, it.x);
       const y = terrain.heightAt(it.x, it.z);
       if (y < SEA_LEVEL + 0.1) continue;
+      // Nothing grows through a set piece.
+      if (!it.kind && scenery.covers(it.x, it.z)) continue;
       // Palms along the coast; broad crowns more often than pines inside the ring of districts; some shrubs in bloom.
       const coastal = r > terrain.shoreAt(a) - 20;
       let kind: FoliageKind = it.kind ?? (it.k === 0 ? "oak" : it.k === 1 ? "pine" : it.k === 2 ? "shrub" : "rock");
