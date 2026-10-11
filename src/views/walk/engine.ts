@@ -225,6 +225,8 @@ export class WalkEngine {
   private padEpoch = 0;
   /** Screen rects (x, y, w, h in view pixels) that projected labels keep clear of, e.g. the district banner. */
   private reserved: number[] = [];
+  /** The HUD's controls and cards (x, y, w, h in view pixels): names never cover them; area labels slide out from under them. */
+  private hud: number[] = [];
   /** Screen rect of the hub's rooftop sign this frame (x, y, w, h), or w < 0 when it is off screen. */
   private beaconRect = [0, 0, -1, 0];
   /** Screen rect of the sign's pole, from the sign down to the roof. */
@@ -471,6 +473,11 @@ export class WalkEngine {
   /** The HUD around the D-pad moved (e.g. the minimap opened): check again whether the pad fits. */
   hudChanged(): void {
     this.padEpoch++;
+  }
+
+  /** The HUD's controls and cards, measured by the view when its layout changes (never per frame). */
+  setHud(rects: readonly { x: number; y: number; w: number; h: number }[]): void {
+    this.hud = rects.flatMap((r) => [r.x, r.y, r.w, r.h]);
   }
 
   /** Keep projected labels out of a HUD element's area (or release it with null). */
@@ -1134,6 +1141,32 @@ export class WalkEngine {
     return sz;
   }
 
+  /**
+   * A label's place, slid out from under the HUD: as it is when it covers no HUD control, otherwise
+   * the nearest place beside or below the control it covers that is in view and clear of every
+   * control (null when there is none).
+   */
+  private clearOfHud(x: number, y: number, w: number, h: number, pad = 6): { x: number; y: number } | null {
+    const hud = this.hud;
+    const hits = (cx: number, cy: number) => {
+      for (let k = 0; k < hud.length; k += 4) {
+        if (cx < hud[k] + hud[k + 2] + pad && cx + w + pad > hud[k] && cy < hud[k + 1] + hud[k + 3] + pad && cy + h + pad > hud[k + 1]) return k;
+      }
+      return -1;
+    };
+    const k = hits(x, y);
+    if (k < 0) return { x, y };
+    const inView = (cx: number, cy: number) => cx >= 4 && cy >= 4 && cx + w <= this.width - 4 && cy + h <= this.height - 4;
+    const tries = [
+      { x: hud[k] - pad - w, y },
+      { x: hud[k] + hud[k + 2] + pad, y },
+      { x, y: hud[k + 1] + hud[k + 3] + pad },
+      { x, y: hud[k + 1] - pad - h },
+    ].sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+    for (const t of tries) if (inView(t.x, t.y) && hits(t.x, t.y) < 0) return t;
+    return null;
+  }
+
   /** Greedy declutter: claim a screen rect unless it overlaps one already claimed. */
   private claim(x: number, y: number, w: number, h: number, pad = 4): boolean {
     const r = this.rects;
@@ -1150,6 +1183,7 @@ export class WalkEngine {
     const focused = document.activeElement;
     this.rects.length = 0;
     for (const v of this.reserved) this.rects.push(v);
+    for (const v of this.hud) this.rects.push(v);
     this.reservePortalLabelSpace();
 
     // Companies and people first (nearest first): name buttons for the closest pins.
@@ -1222,10 +1256,17 @@ export class WalkEngine {
         const s = clamp(1.12 - d / 330, 0.62, 1);
         const sz = this.sizeOf(el);
         if (sz && el !== focused) {
-          const lx = p.sx - (sz.w * s) / 2;
           const lw = sz.w * s;
           const lh = sz.h * s;
-          if (beaconSeen && !behind) {
+          // Out from under the HUD's controls first: beside them, or below.
+          const clear = this.clearOfHud(p.sx - lw / 2, sy - lh, lw, lh);
+          if (clear) {
+            sx = clear.x + lw / 2;
+            sy = clear.y + lh;
+          }
+          const lx = sx - lw / 2;
+          if (!clear) show = false;
+          else if (beaconSeen && !behind) {
             if (this.beaconCover(lx, sy - lh, lw, lh) > 0.3 || !this.claim(lx, sy - lh, lw, lh, 6)) show = false;
           } else if (beaconSeen && this.hitsBeacon(lx, sy - lh, lw, lh)) {
             const b = this.beaconRect;

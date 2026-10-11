@@ -46,6 +46,9 @@ const SHOW_OTHERS_KEY = "portfolio-map-walk-show-others";
 const SOUND_KEY = "portfolio-map-walk-sound";
 /** How long the portal's departure shows before the Nexus opens (time to cancel). */
 const PORTAL_DELAY_MS = 1600;
+/** The HUD's controls and cards that projected labels keep clear of (src/views/walk/engine.ts setHud). */
+const HUD_ITEMS =
+  ".walk-hud-tl .walk-pill, .walk-hud-tl .walk-icon-btn, .walk-intro, .walk-pop, .walk-focus-chip, .walk-minimap, .walk-cam-btns, .walk-travel-controls .walk-pill, .walk-pad, .walk-prompt, .walk-toast";
 /** The pixel ratio's ceiling and the drawing buffer's pixel budget (src/three/adaptiveDpr.ts budgetDpr). */
 const DPR_CAP = 2;
 const PIXEL_BUDGET = 4_200_000;
@@ -455,6 +458,41 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
       camBtns: camRef.current,
     };
     engine.setOverlay(overlay);
+    // The HUD's controls, measured whenever its layout changes (a card opens, the map folds, the
+    // window resizes), never per frame: names stay off them and area labels slide out from under them.
+    const view = viewRef.current;
+    let measured = 0;
+    const measure = () => {
+      measured = 0;
+      if (!view) return;
+      const v = view.getBoundingClientRect();
+      const rects = [...view.querySelectorAll<HTMLElement>(HUD_ITEMS)]
+        .map((el) => el.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => ({ x: r.left - v.left, y: r.top - v.top, w: r.width, h: r.height }));
+      engine.setHud(rects);
+    };
+    const soon = () => {
+      if (!measured) measured = requestAnimationFrame(measure);
+    };
+    const resize = new ResizeObserver(soon);
+    // Only the HUD's own containers are watched (the labels the engine moves every frame are not in them).
+    const watch = () => {
+      changes.disconnect();
+      if (!view) return;
+      resize.observe(view);
+      changes.observe(view, { childList: true });
+      for (const el of view.querySelectorAll<HTMLElement>(".walk-hud")) {
+        resize.observe(el);
+        changes.observe(el, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "hidden", "open"] });
+      }
+    };
+    const changes = new MutationObserver(() => {
+      watch();
+      soon();
+    });
+    watch();
+    soon();
     // Paint each district's (and the People area's) icon onto its landmark medallion, from the same lucide glyph as its label.
     const serializer = new XMLSerializer();
     for (const a of walkAreas()) {
@@ -466,7 +504,12 @@ function WalkWorld({ onContextGiveUp }: { onContextGiveUp: () => void }) {
       clone.setAttribute("stroke", a.color);
       engine.setDistrictIcon(a.slug, serializer.serializeToString(clone));
     }
-    return () => engine.setOverlay(null);
+    return () => {
+      resize.disconnect();
+      changes.disconnect();
+      if (measured) cancelAnimationFrame(measured);
+      engine.setOverlay(null);
+    };
   }, [engine]);
 
   const minimapRef = useRef<HTMLCanvasElement>(null);
