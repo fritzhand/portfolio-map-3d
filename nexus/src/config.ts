@@ -50,7 +50,7 @@ export const AUDIENCES: Audience[] = [
     id: "hubs",
     name: "Hubs and regions",
     summary: "A hub's members, or a region's startups and support organizations, by district.",
-    examples: ["embarc-collective", "florida-ecosystem-map", "india-ecosystem-map"],
+    examples: ["embarc-collective", "florida-ecosystem-map", "india-ecosystem-map", "startup-usa-guide"],
     service: null,
   },
   {
