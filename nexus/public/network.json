@@ -1,6 +1,6 @@
 {
   "protocol": "portfolio-map/1",
-  "generated": "2026-10-10",
+  "generated": "2026-10-12",
   "instances": [
     {
       "entry": {
@@ -11,7 +11,7 @@
         "maintainer": "fritzhand"
       },
       "status": "verified",
-      "checked": "2026-10-10",
+      "checked": "2026-10-12",
       "manifest": {
         "protocol": "portfolio-map/1",
         "id": "ambition-accelerated",
@@ -831,7 +831,7 @@
         "maintainer": "fritzhand"
       },
       "status": "verified",
-      "checked": "2026-10-10",
+      "checked": "2026-10-12",
       "manifest": {
         "protocol": "portfolio-map/1",
         "id": "embarc-collective",
@@ -2825,7 +2825,7 @@
         "ownerConfirmedBy": "fritzhand"
       },
       "status": "verified",
-      "checked": "2026-10-10",
+      "checked": "2026-10-12",
       "manifest": {
         "protocol": "portfolio-map/1",
         "id": "example-collective",
@@ -3242,7 +3242,7 @@
             ]
           }
         ],
-        "updated": "2026-10-10"
+        "updated": "2026-10-11"
       },
       "logoFile": "instances/example-collective.svg",
       "proof": "maintainer",
@@ -3257,7 +3257,7 @@
         "maintainer": "fritzhand"
       },
       "status": "verified",
-      "checked": "2026-10-10",
+      "checked": "2026-10-12",
       "manifest": {
         "protocol": "portfolio-map/1",
         "id": "florida-ecosystem-map",
@@ -9971,7 +9971,7 @@
         "maintainer": "fritzhand"
       },
       "status": "verified",
-      "checked": "2026-10-10",
+      "checked": "2026-10-12",
       "manifest": {
         "protocol": "portfolio-map/1",
         "id": "india-ecosystem-map",
@@ -13127,9 +13127,405 @@
             ]
           }
         ],
-        "updated": "2026-10-10"
+        "updated": "2026-10-12"
       },
       "logoFile": "instances/india-ecosystem-map.svg",
+      "proof": "domain",
+      "problems": []
+    },
+    {
+      "entry": {
+        "id": "venturestudio",
+        "name": "VentureStudio, Ahmedabad University",
+        "url": "https://community.venturestudioindia.com",
+        "joined": "2026-10-12",
+        "maintainer": "fritzhand"
+      },
+      "status": "verified",
+      "checked": "2026-10-12",
+      "manifest": {
+        "protocol": "portfolio-map/1",
+        "id": "venturestudio",
+        "name": "VentureStudio, Ahmedabad University",
+        "publisher": {
+          "name": "VentureStudio, Ahmedabad University",
+          "website": "https://www.venturestudioindia.com"
+        },
+        "url": "https://community.venturestudioindia.com",
+        "tagline": "Startups from the active portfolio of VentureStudio, Ahmedabad University, by sector: on a globe, in a walkable world and in a directory.",
+        "logo": "https://community.venturestudioindia.com/brand/logo.png",
+        "accent": "#801214",
+        "nexus": "https://wearenexus.xyz",
+        "framework": {
+          "name": "portfolio-map-3d",
+          "version": "0.1.0"
+        },
+        "labels": {
+          "company": "startup",
+          "companies": "startups",
+          "district": "sector",
+          "districts": "sectors",
+          "people": null
+        },
+        "counts": {
+          "companies": 28,
+          "people": 0,
+          "districts": 7
+        },
+        "districts": [
+          {
+            "slug": "health",
+            "label": "Health & Life Sciences",
+            "color": "#e34948",
+            "count": 6
+          },
+          {
+            "slug": "deep-tech",
+            "label": "Deep Tech & Hardware",
+            "color": "#2a78d6",
+            "count": 5
+          },
+          {
+            "slug": "mobility-climate",
+            "label": "Mobility & Climate",
+            "color": "#1baf7a",
+            "count": 4
+          },
+          {
+            "slug": "saas",
+            "label": "SaaS & Marketplaces",
+            "color": "#6250d6",
+            "count": 5
+          },
+          {
+            "slug": "consumer",
+            "label": "Consumer & Inclusion",
+            "color": "#e87ba4",
+            "count": 4
+          },
+          {
+            "slug": "agri-food",
+            "label": "Agri & Food",
+            "color": "#008300",
+            "count": 2
+          },
+          {
+            "slug": "education",
+            "label": "Education & Future Work",
+            "color": "#eda100",
+            "count": 2
+          }
+        ],
+        "companies": [
+          {
+            "slug": "heavity-automation",
+            "name": "SHIN Up",
+            "district": "deep-tech",
+            "description": "Heavity Automation develops SHIN Up, a rugged semi-automatic staircase load carrier designed to move heavy goods up stairs and reduce material handling strain in domestic and commercial settings.",
+            "website": null,
+            "keywords": [
+              "Material handling and mobility",
+              "Heavity Automation Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "h-vision-india",
+            "name": "H Vision",
+            "district": "consumer",
+            "description": "H Vision develops a smart wallet for blind and visually challenged users that identifies currency notes, detects whether notes are real or fake, and provides audio output in Hindi and English.",
+            "website": "https://hvision.in/",
+            "keywords": [
+              "H VISION INDIA PRIVATE LIMITED"
+            ]
+          },
+          {
+            "slug": "chaitralab",
+            "name": "Chaitra Labs",
+            "district": "health",
+            "description": "Chaitra Labs develops a preformed intra-oral fixed device for managing paediatric obstructive sleep apnea, supporting earlier intervention for snoring and airway-related sleep disorders in growing children.",
+            "website": null,
+            "keywords": [
+              "Paediatric sleep apnea",
+              "Chaitralab LLP"
+            ]
+          },
+          {
+            "slug": "vidcare-innovations",
+            "name": "Vidcare Innovations",
+            "district": "health",
+            "description": "Vidcare Innovations develops a rapid, pocket-sized, instrument-free point-of-care disposable blood testing platform for newborn screening in resource-limited healthcare settings.",
+            "website": "https://vidcare.in/",
+            "keywords": [
+              "Point-of-care diagnostics",
+              "Vidcare Innovations Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "pragmatech-healthcare",
+            "name": "Pragmatech Healthcare",
+            "district": "health",
+            "description": "Pragmatech Healthcare develops affordable immunoassay kits and point-of-care tests for cervical cancer screening, with CERVICHECK as its first product line for accessible preventive screening.",
+            "website": "https://pragmatech.co.in/",
+            "keywords": [
+              "Cancer screening",
+              "Pragmatech Healthcare Solutions Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "tranzitor",
+            "name": "Tranzitor",
+            "district": "mobility-climate",
+            "description": "Tranzitor develops electric retrofitment powertrains for light commercial vehicles, converting conventional diesel vehicles into electric mobility solutions using indigenous battery packs and supporting EV components.",
+            "website": null,
+            "keywords": [
+              "Electric vehicle retrofit",
+              "Tranzitor Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "avia-training-solutions",
+            "name": "Avia Training Solutions",
+            "district": "deep-tech",
+            "description": "Avia Training Solutions develops Extended Reality-based training stations and AR/VR learning modules for the Indian Armed Forces, improving maintenance training, operational preparedness and system reliability.",
+            "website": null,
+            "keywords": [
+              "Training simulation",
+              "Avia Training Solutions Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "worker-naka",
+            "name": "Worker Naka",
+            "district": "saas",
+            "description": "Worker Naka is an online marketplace that connects construction contractors with semi-skilled and daily-wage workers, improving labour access, workforce utilisation and dignity at the bottom of the pyramid.",
+            "website": "https://www.workernaka.com/",
+            "keywords": [
+              "Worker Naka Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "krishimani",
+            "name": "Krishimani",
+            "district": "agri-food",
+            "description": "Krishimani develops an autonomous agricultural rover that supports seed sowing, fertiliser application and pesticide spraying, reducing input wastage and labour dependency through precise farm automation.",
+            "website": null,
+            "keywords": [
+              "Farm automation"
+            ]
+          },
+          {
+            "slug": "panthera-cleantech",
+            "name": "Scale-O",
+            "district": "mobility-climate",
+            "description": "Panthera CleanTech develops salt-free water softening and cleaning solutions under the Scale-O brand, helping homes, institutions and commercial spaces address hard-water scaling more sustainably.",
+            "website": "https://scale-o.com/",
+            "keywords": [
+              "Water treatment",
+              "Panthera Cleantech Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "hyperlab-sportech",
+            "name": "Hyperlab",
+            "district": "consumer",
+            "description": "Hyperlab develops fitness and sports training products that combine laser-projected virtual targets with physical drills, giving athletes and amateurs a gamified way to train reflexes, agility and precision.",
+            "website": "https://hyperlab.life/",
+            "keywords": [
+              "Sports training hardware",
+              "Hustle",
+              "Hyperlab Sportech Private Limited"
+            ]
+          },
+          {
+            "slug": "igneeva-homebot",
+            "name": "Homebot",
+            "district": "deep-tech",
+            "description": "Igneeva Advanced Technologies develops robotics, IoT and machine learning solutions, including Homebot smart robotic floor cleaners and autonomous mobile robots for material handling environments.",
+            "website": null,
+            "keywords": [
+              "Consumer and industrial robotics",
+              "Igneeva Advanced Technologies Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "aquaairx",
+            "name": "Aeronuts",
+            "district": "deep-tech",
+            "description": "Aeronuts develops amphibious drones with both aerial and underwater capabilities for defence and commercial applications, supporting inspection, underwater exploration and difficult-to-access environments.",
+            "website": "https://www.aquaairx.com/",
+            "keywords": [
+              "Amphibious drones",
+              "Aquaairx Autonomous Systems Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "thinkmonk-edutech",
+            "name": "Teach.Us",
+            "district": "education",
+            "description": "Teach.Us is an academic management software platform that digitises college operations and connects students, teachers, parents and principals through real-time workflows, admissions, scheduling and analytics.",
+            "website": "https://www.teachusapp.com/",
+            "keywords": [
+              "Academic management software",
+              "Thinkmonk Edutech Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "oneceptual-technologies",
+            "name": "Oneceptual Technologies",
+            "district": "consumer",
+            "description": "Oneceptual Technologies develops affordable mobility solutions for differently abled users, including Handicare, a manually operated friction-driven device that supports independence without batteries or fuel.",
+            "website": null,
+            "keywords": [
+              "Assistive mobility",
+              "Oneceptual Technologies LLP"
+            ]
+          },
+          {
+            "slug": "earth-tatva",
+            "name": "Earth Tatva",
+            "district": "mobility-climate",
+            "description": "Earth Tatva transforms post-industrial ceramic waste into recyclable tableware and architectural materials, reducing virgin raw material use and supporting circular, low-waste ceramic manufacturing.",
+            "website": "https://www.earthtatva.com/",
+            "keywords": [
+              "Recycled ceramics",
+              "Earth Tatva Innovation Pvt. Ltd"
+            ]
+          },
+          {
+            "slug": "navidad-infotech",
+            "name": "Navidad Infotech",
+            "district": "saas",
+            "description": "Navidad Infotech develops Holostick, a camera automation and light-painting tool that helps photographers create holographic visual effects quickly using embedded systems and open-source technology.",
+            "website": "https://navidad.in/",
+            "keywords": [
+              "Creative electronics",
+              "Navidad Infotech Pvt. Ltd"
+            ]
+          },
+          {
+            "slug": "sensegood-instruments",
+            "name": "Sensegood Instruments",
+            "district": "deep-tech",
+            "description": "Sensegood Instruments develops electronic and sensing instruments for sectors such as colour management, agriculture, defence, telecom and space, including spectrophotometer-based tools for accurate quality measurement.",
+            "website": "https://sensegoodinstruments.com/",
+            "keywords": [
+              "Sensing and measurement",
+              "Sensegood Instruments Private Limited"
+            ]
+          },
+          {
+            "slug": "e-carebetics",
+            "name": "E-Carebetics",
+            "district": "health",
+            "description": "E-Carebetics develops an AI-enabled diabetic retinopathy and ocular disease screening solution that combines smartphone-based imaging, optical attachments and clinical decision-support software for accessible eye care.",
+            "website": "https://e-carebetics.netlify.app/",
+            "keywords": [
+              "AI eye screening",
+              "Anself Dynamics Private Limited"
+            ]
+          },
+          {
+            "slug": "laxmigyaan",
+            "name": "LaxmiGyaan",
+            "district": "education",
+            "description": "LaxmiGyaan is a lifelong learning and upskilling initiative focused on empowering women and insurance agents through professional development and financial knowledge-building.",
+            "website": "https://laxmigyaan.com/",
+            "keywords": [
+              "Financial learning",
+              "L-Earning Lifeline (OPC) Private Ltd"
+            ]
+          },
+          {
+            "slug": "nawgati",
+            "name": "Nawgati",
+            "district": "saas",
+            "description": "Nawgati develops vehicle queue management and fuel-station automation solutions using AI, dispenser-level monitoring and consumer-facing tools to improve fuelling efficiency and congestion management.",
+            "website": "https://www.nawgati.com/",
+            "keywords": [
+              "Fuel station automation",
+              "Nawgati Tech Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "univia",
+            "name": "Univia",
+            "district": "agri-food",
+            "description": "Univia is an agritech platform that provides farmers with an e-commerce marketplace for agri-inputs, real-time agronomy information and personalised advisory support through a mobile-first interface.",
+            "website": "https://univia.in/",
+            "keywords": [
+              "Agri-input marketplace",
+              "Univia Private Limited"
+            ]
+          },
+          {
+            "slug": "health-e",
+            "name": "Health-e",
+            "district": "health",
+            "description": "Health-e helps users digitise medical records, create ABHA IDs, store health information and share records with doctors, insurers and healthcare institutions through an ABDM-approved digital health locker.",
+            "website": "https://health-e.in/",
+            "keywords": [
+              "Personal health records",
+              "Anahat Solutions Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "xscale",
+            "name": "Xscale",
+            "district": "saas",
+            "description": "Xscale Global helps B2B SaaS and technology companies build sustainable, cost-optimised sales engines, craft go-to-market strategy, deploy GTM technology and accelerate global revenue expansion.",
+            "website": "https://xscaleglobal.com/",
+            "keywords": [
+              "B2B growth consulting",
+              "Xscale Consulting Private Limited"
+            ]
+          },
+          {
+            "slug": "societiez",
+            "name": "Societiez",
+            "district": "saas",
+            "description": "Societiez is a Web3-based social media platform that enables users to connect, explore communities, earn rewards and maintain control over their identity and content.",
+            "website": null,
+            "keywords": [
+              "Web3 social media",
+              "Networkify Tech Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "poolit",
+            "name": "POOLit",
+            "district": "mobility-climate",
+            "description": "POOLit is an app-based inter-city and intra-city carpooling service that connects private car owners with passengers to reduce fuel costs, enable ride sharing and support passive income for drivers.",
+            "website": "https://www.poolit.org/",
+            "keywords": [
+              "Ride sharing"
+            ]
+          },
+          {
+            "slug": "glovatrix",
+            "name": "Fifth Sense",
+            "district": "consumer",
+            "description": "Glovatrix develops affordable wearable technology such as Fifth Sense, which recognises and translates sign-language gestures into voice and text to support communication for speech and hearing impaired users.",
+            "website": "https://glovatrix.org/",
+            "keywords": [
+              "Assistive communication",
+              "Glovatrix Pvt Ltd"
+            ]
+          },
+          {
+            "slug": "kalimed-tech",
+            "name": "Oom",
+            "district": "health",
+            "description": "KaliMed Tech develops Oom, an ECG monitoring technology that securely transmits patient data, detects cardiac arrhythmias, provides real-time alerts and enables live monitoring for healthcare professionals.",
+            "website": "https://projectkmt.com/",
+            "keywords": [
+              "Cardiac monitoring",
+              "KaliMed Tech Pvt Ltd"
+            ]
+          }
+        ],
+        "updated": "2026-10-12"
+      },
+      "logoFile": "instances/venturestudio.png",
       "proof": "domain",
       "problems": []
     }
