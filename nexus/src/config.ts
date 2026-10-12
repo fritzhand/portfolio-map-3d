@@ -36,7 +36,7 @@ export const AUDIENCES: Audience[] = [
     id: "accelerators",
     name: "Accelerators and incubators",
     summary: "Each cohort by track or program, as a globe, a walkable world and a directory.",
-    examples: ["ambition-accelerated"],
+    examples: ["ambition-accelerated", "venturestudio"],
     service: null,
   },
   {
