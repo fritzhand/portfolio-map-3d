@@ -1,7 +1,7 @@
 /* The landing page: the framework, and the network it joins. Its hero is the live Nexus,
    drifting behind the headline; everything below is short, factual and in the third person. */
 import { useEffect, useRef, type RefObject } from "react";
-import { Briefcase, Building, CalendarDays, ChevronDown, Minus, Plus, Rocket, RotateCcw, type LucideIcon } from "lucide-react";
+import { Briefcase, Building, CalendarDays, ChevronDown, FileSpreadsheet, Minus, Plus, Rocket, RotateCcw, type LucideIcon } from "lucide-react";
 import { FRAMEWORK_REPO } from "../../../federation/protocol.ts";
 import { AUDIENCES, HERO_WORDS, PROMO_VIDEO, WHITE_GLOVE, intakeHref, isPublicGitHubForm } from "../config.ts";
 import { formatDate, plural } from "../lib/copy.ts";
@@ -11,6 +11,7 @@ import type { NetworkState } from "../hooks/useNetwork.ts";
 import type { World } from "../lib/network.ts";
 import type { EngineStatus } from "../hooks/useEngine.ts";
 import type { NexusEngine } from "../three/engine.ts";
+import { APPS, AppBadge } from "./AppMarks.tsx";
 import { AudienceWord } from "./AudienceWord.tsx";
 import { CodeBlock } from "./CodeBlock.tsx";
 import { ArrowRight, Check, External, Mark } from "./Icons.tsx";
@@ -30,6 +31,8 @@ const DOCS = `${FRAMEWORK_REPO}/tree/main/docs`;
 const JOINING = `${FRAMEWORK_REPO}/blob/main/docs/network.md#joining`;
 /** The local MCP server that lets an AI assistant build a map (mcp/). */
 const MCP_GUIDE = `${FRAMEWORK_REPO}/blob/main/docs/mcp.md`;
+/** How the builder imports companies from another app (import_companies, import_from_app). */
+const FROM_APP_GUIDE = `${MCP_GUIDE}#from-another-app-a-crm-a-database-a-spreadsheet`;
 const TERMS = `${FRAMEWORK_REPO}/blob/main/NETWORK.md`;
 
 /** Each audience's icon, by its id in AUDIENCES; an audience without one shows none. */
@@ -273,6 +276,32 @@ export function Landing({ route, net, engine, gl, onEnter, pickRef }: Props) {
                 <CodeBlock code={START} label="Start a map" />
                 <p className="fine">Requires Node 22.18+. The example uses fictional companies.</p>
               </div>
+            </div>
+            <div className="start-apps" aria-labelledby="apps-title">
+              <h3 id="apps-title">Import from another app</h3>
+              <p>
+                Keep your companies in a CRM, a database or a spreadsheet? An AI assistant connected to it can import them through the
+                MCP builder. You choose the list and see a preview before anything is written.
+              </p>
+              <ul className="app-list" aria-label="Apps to import from">
+                {APPS.map((app) => (
+                  <li key={app.name} className="world-pill">
+                    <AppBadge app={app} />
+                    <span className="world-pill-name">{app.name}</span>
+                  </li>
+                ))}
+                <li className="world-pill">
+                  <span className="badge badge-logo app-badge app-badge-file" aria-hidden="true">
+                    <FileSpreadsheet />
+                  </span>
+                  <span className="world-pill-name">A CSV file</span>
+                </li>
+              </ul>
+              <p className="fine">
+                The builder never connects to these apps and takes only the fields the map shows. HubSpot, Airtable, Notion and Google
+                Sheets are trademarks of their owners, who do not endorse this project.{" "}
+                <a className="text-link" href={FROM_APP_GUIDE}>How it works <External size={16} /></a>
+              </p>
             </div>
           </div>
         </section>
