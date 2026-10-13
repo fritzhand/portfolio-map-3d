@@ -294,3 +294,35 @@
 .walk-travel-controls kbd { margin-left: 4px; }
 .walk-travel-message { max-width: 200px; padding: 8px; border-radius: var(--radius-sm); color: var(--text); background: var(--surface); font: 400 13px/1.5 var(--font-sans); }
 @media (max-width: 760px) { .walk-travel-controls { left: 10px; bottom: calc(var(--sheet-h) + 12px); } }
+
+/* ---- the island overlay (src/island): shared pieces of its HUD ---- */
+.island-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.island-layer > .walk-district-label,
+.island-layer > .walk-prompt,
+.island-layer > .walk-portal-card { position: absolute; left: 0; top: 0; will-change: transform; }
+.island-layer > .walk-district-label { pointer-events: auto; transform-origin: 50% 100%; }
+.island-layer > .walk-prompt { pointer-events: auto; left: 50%; top: auto; bottom: 24px; transform: translateX(-50%); }
+.island-layer > .walk-prompt[hidden] { display: none; }
+.island-layer > .walk-portal-card { pointer-events: auto; }
+.island-layer > .walk-portal-card[hidden] { display: none; }
+.island-layer > .island-sound { position: absolute; right: 12px; bottom: 12px; pointer-events: auto; }
+.island-layer > .island-hint { pointer-events: none; }
+
+/* ---------- keepsakes, sound and the find toast ---------- */
+.walk-keepsakes { font-variant-numeric: tabular-nums; }
+.walk-keepsakes svg { color: var(--scene-flag); }
+.walk-keeps-pop { position: static; width: min(340px, 100%); }
+.walk-keeps-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.walk-keeps-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: start; color: var(--text-muted); line-height: 1.4; }
+.walk-keeps-list li.is-found { color: var(--text); }
+.walk-keeps-mark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-alt); font-size: 12px; font-weight: 700; }
+.walk-keeps-list li.is-found .walk-keeps-mark { background: var(--scene-flag); color: #1d1f24; }
+.walk-toast {
+  position: absolute; z-index: 7; left: 50%; bottom: calc(var(--sheet-h, 0px) + 96px); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; max-width: min(460px, calc(100% - 24px)); padding: 10px 18px;
+  border-radius: var(--radius-pill); background: var(--surface); color: var(--text); box-shadow: var(--shadow-2);
+  font: 600 14px/1.4 var(--font-sans); pointer-events: none; animation: walk-toast-in 0.35s ease-out;
+}
+.walk-toast svg { color: var(--scene-flag); flex: none; }
+@keyframes walk-toast-in { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .walk-toast { animation: none; } }

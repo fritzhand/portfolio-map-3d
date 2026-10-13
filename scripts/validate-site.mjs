@@ -43,9 +43,12 @@ const TEAM_KEYS = ["name", "title", "source"];
 const TEAM_OPTIONAL = ["linkedin"];
 const CONNECTION_KEYS = ["with", "kind", "summary", "source"];
 const DISTRICT_KEYS = ["slug", "label", "short", "color", "icon", "industries"];
-const DISTRICT_OPTIONAL = ["note"];
+const DISTRICT_OPTIONAL = ["note", "theme"];
 
 const readJson = (p) => JSON.parse(readFileSync(p, "utf8"));
+const WALK_THEMES = readJson(new URL("../src/island/themes.json", import.meta.url)).themes;
+/** The walk worlds a site can choose (site.json walk.world; src/site.ts WALK_WORLDS). */
+const WALK_WORLDS = ["campus", "classic"];
 const isObj = (v) => typeof v === "object" && v !== null && !Array.isArray(v);
 const isText = (v) => typeof v === "string" && v.trim().length > 0;
 
@@ -125,7 +128,7 @@ export function validateSite(root = ROOT) {
   };
 
   /* ---------------- site.json ---------------- */
-  keysOnly(site, ["network", "org", "map", "labels", "theme", "live"], ["$schema"], "site.json");
+  keysOnly(site, ["network", "org", "map", "labels", "theme", "live"], ["$schema", "walk"], "site.json");
   if (isObj(site.network)) {
     keysOnly(site.network, ["id", "shareDescriptions"], [], "site.json network");
     if (typeof site.network.id !== "string" || !ID_PATTERN.test(site.network.id)) err('site.json network.id: lowercase letters, digits and hyphens, 2 to 48 characters (e.g. "acme-ventures")');
@@ -166,6 +169,16 @@ export function validateSite(root = ROOT) {
       const ink = contrast(t.ink, "#ffffff");
       if (ink < 7) err(`site.json theme.ink: ${ink.toFixed(2)}:1 on white; label text needs 7:1 or more (use a darker ink)`);
     }
+  }
+  if (site.walk !== undefined) {
+    if (!isObj(site.walk)) err('site.json walk: expected an object, e.g. { "world": "campus" }');
+    else {
+      keysOnly(site.walk, ["world"], [], "site.json walk");
+      if (!WALK_WORLDS.includes(site.walk.world)) err(`site.json walk.world: "${site.walk.world}" is not a walk world; pick one of ${WALK_WORLDS.join(", ")}`);
+    }
+  }
+  if (isObj(site.live) && site.live.enabled === true && (site.walk?.world ?? "campus") !== "classic") {
+    warnings.push('site.json live.enabled: live explorers run in the classic walk world only; set "walk": { "world": "classic" } to use them (docs/live-explorers.md)');
   }
   if (isObj(site.live)) {
     keysOnly(site.live, ["enabled", "channel"], [], "site.json live");
@@ -209,6 +222,7 @@ export function validateSite(root = ROOT) {
       if (colors.has(d.color?.toLowerCase())) err(`${where}.color: ${d.color} is already another district's color`);
       colors.add(d.color?.toLowerCase());
       if (!icons.has(d.icon)) err(`${where}.icon: "${d.icon}" is not in DISTRICT_ICONS (src/components/bits.tsx); pick one of ${[...icons].join(", ")}`);
+      if (d.theme !== undefined && !WALK_THEMES.includes(d.theme)) err(`${where}.theme: "${d.theme}" is not a walk-world theme; pick one of ${WALK_THEMES.join(", ")}`);
       if (!Array.isArray(d.industries)) err(`${where}.industries: expected a list of industriesServed slugs`);
       else for (const s of d.industries) if (!industries.has(s)) err(`${where}.industries: "${s}" is not in industriesServed`);
     });

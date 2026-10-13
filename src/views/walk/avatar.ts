@@ -23,7 +23,7 @@ const STRAW = new THREE.Color("#e6c67a");
 const WHITE = new THREE.Color("#ffffff");
 /** Hair and trousers are not broadcast: they are derived from the spec, so every viewer draws the same explorer. */
 const HAIR = ["#2b1d16", "#3a2a20", "#6b3e22", "#a0522d", "#d8b46a", "#8c8c8c"].map((h) => new THREE.Color(h));
-const TROUSERS = ["#2d4a65", "#3b4252", "#5b4a3a", "#55613a", "#c9b48f", "#1d2a3a"].map((h) => new THREE.Color(h));
+const TROUSERS = ["#8a6fb8", "#4a6fa5", "#c9b48f", "#5b8a72", "#c46b5a", "#6d6a9c"].map((h) => new THREE.Color(h));
 
 /** Small deterministic hash of the spec (FNV-1a). */
 export function specHash(s: AvatarSpec, salt = 0): number {
@@ -65,12 +65,20 @@ export function hatParts(hat: Hat, accent: THREE.Color, body: THREE.Color): Part
         at(new THREE.SphereGeometry(0.035, 6, 4), 0, 0.245, 0, trim),
       ];
     }
-    case "straw":
+    case "straw": {
+      // A wide, gently sagging brim, a rounded crown and a ribbon: a sun hat.
+      const brim = new THREE.CylinderGeometry(0.5, 0.46, 0.03, 22, 1);
+      const bp = brim.attributes.position;
+      for (let i = 0; i < bp.count; i++) {
+        const d = Math.hypot(bp.getX(i), bp.getZ(i));
+        bp.setY(i, bp.getY(i) - Math.max(0, d - 0.28) * 0.28);
+      }
       return [
-        at(new THREE.CylinderGeometry(0.44, 0.44, 0.025, 20), 0, 0.1, 0, STRAW),
-        at(new THREE.CylinderGeometry(0.17, 0.205, 0.18, 14), 0, 0.2, 0, STRAW),
-        at(new THREE.CylinderGeometry(0.212, 0.212, 0.055, 14), 0, 0.14, 0, accent),
+        at(brim, 0, 0.11, 0, STRAW),
+        at(new THREE.SphereGeometry(0.215, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.95, 1), 0, 0.1, 0, mixc(STRAW, WHITE, 0.12)),
+        at(new THREE.CylinderGeometry(0.218, 0.226, 0.06, 14), 0, 0.15, 0, accent),
       ];
+    }
     case "beanie":
       return [
         at(new THREE.SphereGeometry(0.224, 14, 9, 0, Math.PI * 2, 0, Math.PI * 0.56).scale(1, 1.18, 1), 0, 0.01, 0, accent),
@@ -137,10 +145,10 @@ export function buildAvatar(spec: AvatarSpec): Avatar {
   const skin = c(spec.skin);
   const shirtDark = mixc(body, INK, 0.25);
   const hair = HAIR[specHash(spec, 1) % HAIR.length].clone();
+  // Shorts, and bare feet.
   let pants = TROUSERS[specHash(spec, 2) % TROUSERS.length].clone();
-  if (luma(pants) > 0.25) pants = mixc(pants, INK, 0.3);
-  if (Math.abs(luma(pants) - luma(body)) < 0.1) pants = mixc(pants, INK, 0.45);
-  const shoes = luma(accent) > 0.85 ? WHITE.clone() : mixc(accent, INK, 0.35);
+  if (Math.abs(luma(pants) - luma(body)) < 0.1) pants = mixc(pants, luma(body) > 0.5 ? INK : WHITE, 0.4);
+  const shoes = mixc(skin, new THREE.Color("#7a4a30"), 0.18);
   // A stripe across the shirt in the accent (or a contrasting tone when the accent matches the shirt).
   const stripe = Math.abs(luma(accent) - luma(body)) < 0.1 ? mixc(body, luma(body) > 0.5 ? INK : WHITE, 0.55) : accent;
   // Explorers differ a little in height, too.
@@ -160,16 +168,18 @@ export function buildAvatar(spec: AvatarSpec): Avatar {
   const leg = (side: number) => {
     const pivot = new THREE.Group();
     pivot.position.set(0.13 * side, 0.76, 0);
-    pivot.add(meshOf([at(new THREE.CapsuleGeometry(0.105, 0.17, 2, 8), 0, -0.16, 0, pants)]));
+    pivot.add(meshOf([
+      at(new THREE.CapsuleGeometry(0.125, 0.07, 2, 8), 0, -0.1, 0, pants),
+      at(new THREE.CylinderGeometry(0.09, 0.088, 0.2, 8), 0, -0.26, 0, skin),
+    ]));
     const knee = new THREE.Group();
     knee.position.y = -0.36;
-    const sole = mixc(shoes, INK, 0.7);
+    const sole = mixc(shoes, INK, 0.25);
     knee.add(meshOf([
-      at(new THREE.SphereGeometry(0.095, 8, 6), 0, 0, 0, pants),
-      at(new THREE.CylinderGeometry(0.09, 0.075, 0.26, 8), 0, -0.15, 0, pants),
-      at(new THREE.CylinderGeometry(0.08, 0.08, 0.075, 8), 0, -0.282, 0, shirtDark),
-      at(new THREE.BoxGeometry(0.21, 0.13, 0.31), 0, -0.335, 0.065, shoes),
-      at(new THREE.BoxGeometry(0.22, 0.035, 0.32), 0, -0.3825, 0.065, sole),
+      at(new THREE.SphereGeometry(0.088, 8, 6), 0, 0, 0, skin),
+      at(new THREE.CylinderGeometry(0.084, 0.062, 0.26, 8), 0, -0.15, 0, skin),
+      at(new THREE.BoxGeometry(0.17, 0.13, 0.3), 0, -0.335, 0.065, shoes),
+      at(new THREE.BoxGeometry(0.18, 0.035, 0.31), 0, -0.3825, 0.065, sole),
     ]));
     pivot.add(knee);
     return { pivot, knee };
@@ -179,8 +189,9 @@ export function buildAvatar(spec: AvatarSpec): Avatar {
 
   const bodyGroup = new THREE.Group(); // everything above the hips bobs with the walk
   const hip = meshOf([
-    at(new THREE.CylinderGeometry(0.22, 0.235, 0.2, 10).scale(1, 1, 0.8), 0, 0.79, 0, pants),
-    at(new THREE.CylinderGeometry(0.223, 0.227, 0.045, 10).scale(1, 1, 0.8), 0, 0.85, 0, INK),
+    at(new THREE.CylinderGeometry(0.23, 0.245, 0.2, 10).scale(1, 1, 0.8), 0, 0.77, 0, pants),
+    // The shirt hangs loose over the shorts.
+    at(new THREE.CylinderGeometry(0.255, 0.285, 0.17, 10).scale(1, 1, 0.8), 0, 0.88, 0, body),
   ]);
 
   // Chest (breathes): torso, collar and the gear.

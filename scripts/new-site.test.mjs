@@ -20,6 +20,8 @@ describe("new-site", () => {
     expect(c.network.id).toBe("acme-ventures");
     expect(c.map.url).toBe("https://map.acme.example");
     expect(c.labels).toMatchObject({ company: "startup", companies: "startups", hub: "Acme Ventures" });
+    expect(c.walk).toEqual({ world: "campus" });
+    expect(newSiteConfig({ name: "Acme", id: "acme", url: "https://map.acme.example", world: "classic" }).walk).toEqual({ world: "classic" });
   });
 
   it("replaces the example: no companies, people, logos or brand files; the validator then asks for a company", () => {

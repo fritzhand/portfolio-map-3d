@@ -121,6 +121,25 @@ describe("validateSite", () => {
       'site.json map.url: write it as "https://wearenexus.xyz/example" (no trailing slash, query or hash)',
     ]);
   });
+
+  it("takes either walk world, or none (the campus), and nothing else", () => {
+    expect(errorsAfter("site.json", (s) => (s.walk = { world: "classic" }))).toEqual([]);
+    expect(errorsAfter("site.json", (s) => delete s.walk)).toEqual([]);
+    expect(errorsAfter("site.json", (s) => (s.walk = { world: "village" }))).toEqual(['site.json walk.world: "village" is not a walk world; pick one of campus, classic']);
+    expect(errorsAfter("site.json", (s) => (s.walk = { world: "classic", extra: 1 }))).toHaveLength(1);
+    expect(errorsAfter("site.json", (s) => (s.walk = "classic"))).toEqual(['site.json walk: expected an object, e.g. { "world": "campus" }']);
+  });
+
+  it("warns when live explorers are on but the walk world is the campus, which has none", () => {
+    const warningsAfter = (change) => {
+      const root = copy();
+      edit(root, "site.json", change);
+      return validateSite(root).warnings.filter((w) => w.startsWith("site.json live.enabled"));
+    };
+    expect(warningsAfter((s) => (s.live.enabled = true))).toHaveLength(1);
+    expect(warningsAfter((s) => ((s.live.enabled = true), (s.walk = { world: "classic" })))).toEqual([]);
+    expect(warningsAfter(() => {})).toEqual([]);
+  });
 });
 
 describe("validate-site helpers", () => {

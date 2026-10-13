@@ -1,0 +1,61 @@
+/* The island's HUD (src/island/mapOverlay.ts, mapMinimap.ts), on top of walk.css's shared
+   pieces. Chrome colors are tokens.css variables; a district's color arrives as --d. Everything at
+   the bottom stays above the details sheet (--sheet-h). */
+
+/* District chips: placed each frame by mapLabels.placeChips; a chip with no free spot fades out. */
+.island-layer > .island-chip { opacity: 0; pointer-events: none; transition: opacity 160ms var(--ease, ease); }
+.island-layer > .island-chip.is-shown { opacity: 1; pointer-events: auto; }
+.island-chip .walk-district-icon { width: 30px; height: 30px; }
+.island-chip .island-short { display: none; }
+
+/* Where you are. */
+.island-layer > .island-here {
+  position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 8px;
+  max-width: calc(100% - 220px); padding: 4px 14px 4px 4px; border-radius: var(--radius-pill);
+  border: 2px solid var(--d); background: var(--surface); color: var(--text); box-shadow: var(--shadow-2);
+  white-space: nowrap; overflow: hidden; pointer-events: none; animation: island-here-in 220ms var(--ease, ease);
+}
+.island-here .walk-district-icon { width: 26px; height: 26px; }
+.island-here .walk-district-text strong { font-size: 14px; }
+.island-here.is-people { --d: var(--person-ring); }
+.island-here.is-people .walk-district-icon { background: var(--person); }
+@keyframes island-here-in { from { opacity: 0; transform: translateY(-6px); } }
+
+/* The minimap, top right. */
+.island-layer > .island-corner { position: absolute; top: 12px; right: 12px; z-index: 1; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none; }
+.island-corner > * { pointer-events: auto; }
+.island-minimap .walk-minimap-toggle svg { transition: transform 160ms var(--ease, ease); }
+.island-minimap.is-closed .walk-minimap-toggle svg { transform: rotate(-90deg); }
+.island-minimap .walk-minimap-body { cursor: pointer; }
+/* At night the map dims with the island; the districts' buttons on it keep their colors. */
+:root[data-theme="dark"] .island-minimap canvas { filter: brightness(0.62) saturate(0.85); }
+.island-minimap .island-minimap-hit { pointer-events: none; }
+.island-minimap-hit.is-hover { box-shadow: inset 0 0 0 2px var(--surface); }
+.island-minimap-hit.is-current { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.island-minimap-you { position: absolute; left: 0; top: 0; width: 16px; height: 16px; pointer-events: none; will-change: transform; }
+.island-minimap-you svg { display: block; fill: var(--brand-ink, #1d1f24); stroke: #ffffff; stroke-width: 1.6; stroke-linejoin: round; paint-order: stroke; }
+
+/* Bottom of the view: kept above the details sheet. */
+.island-layer > .walk-prompt { bottom: calc(var(--sheet-h, 0px) + 24px); max-width: calc(100% - 180px); }
+.island-layer > .walk-prompt kbd { margin-left: 4px; }
+.island-layer > .island-sound { bottom: calc(var(--sheet-h, 0px) + 12px); }
+.island-layer > .island-hint { transition: opacity 1.5s; }
+.island-layer > .island-hint.is-gone { opacity: 0; }
+.island-layer > .walk-portal-card { z-index: 2; width: min(420px, calc(100% - 24px)); }
+
+@media (max-width: 760px) {
+  .island-chip .island-long { display: none; }
+  .island-chip .island-short { display: inline; }
+  .island-chip .walk-district-icon { width: 24px; height: 24px; }
+  .island-layer > .island-here { top: 10px; left: 10px; max-width: calc(100% - 176px); }
+  .island-layer > .island-corner { top: 10px; right: 10px; }
+  .island-layer > .walk-prompt { bottom: calc(var(--sheet-h, 0px) + 64px); max-width: calc(100% - 24px); }
+  /* The portal card docks above the bottom controls, clear of the minimap. */
+  .island-layer > .walk-portal-card { top: auto; left: 12px; right: 12px; bottom: calc(var(--sheet-h, 0px) + 64px); width: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .island-layer > .island-chip, .island-minimap .walk-minimap-toggle svg, .island-layer > .island-hint { transition: none; }
+  .island-layer > .island-here { animation: none; }
+}
+.island-layer.is-still > .island-chip { transition: none; }

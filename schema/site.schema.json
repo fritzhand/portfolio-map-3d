@@ -219,6 +219,24 @@
         }
       }
     },
+    "walk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "world"
+      ],
+      "properties": {
+        "world": {
+          "type": "string",
+          "enum": [
+            "campus",
+            "classic"
+          ],
+          "default": "campus",
+          "description": "The walk world: \"campus\", the tech campus built in Blender from code (art/), or \"classic\", the village built in TypeScript, with live explorers. Optional; the default is campus. docs/configuration.md#the-walk-world compares them."
+        }
+      }
+    },
     "live": {
       "type": "object",
       "additionalProperties": false,
@@ -229,7 +247,7 @@
       "properties": {
         "enabled": {
           "type": "boolean",
-          "description": "Live explorers in the walk world (needs a Supabase project: docs/live-explorers.md)."
+          "description": "Live explorers in the walk world (the classic world only; needs a Supabase project: docs/live-explorers.md)."
         },
         "channel": {
           "type": "string",

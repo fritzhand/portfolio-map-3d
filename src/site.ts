@@ -55,15 +55,27 @@ export interface SiteConfig {
     /** The brand's dark ink: text on light plates, the dark badge plate. */
     ink: string;
   };
+  /** The walk world (optional; the default is the campus). */
+  walk?: {
+    /** "campus": the Blender-built tech campus. "classic": the code-built village, with live explorers. */
+    world: WalkWorldName;
+  };
   live: {
-    /** Live explorers in the walk world (Supabase Realtime). Off unless the site turns it on. */
+    /** Live explorers in the walk world (Supabase Realtime; the classic world only). Off unless the site turns it on. */
     enabled: boolean;
     /** The Realtime channel's base name; production joins "<channel>-v1", every other build "<channel>-preview". */
     channel: string;
   };
 }
 
+/** The two walk worlds a site can choose between (src/views/walk/WalkView.tsx). */
+export type WalkWorldName = "campus" | "classic";
+export const WALK_WORLDS: readonly WalkWorldName[] = ["campus", "classic"];
+
 export const SITE = siteFile as SiteConfig;
+
+/** The walk world this site uses. */
+export const WALK_WORLD: WalkWorldName = SITE.walk?.world === "classic" ? "classic" : "campus";
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

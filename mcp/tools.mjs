@@ -42,6 +42,8 @@ The map keeps these rules, and so do you:
 
 Every change is checked with the validator the build runs. A change that would add a problem is refused, nothing is written, and the refusal lists what to fix.
 
+The walk world has two bases (site.json walk.world): "campus", the default, a tech campus whose models are built in Blender from code, and "classic", a village built in TypeScript with live explorers. Restyling the classic world takes code edits only; restyling the campus's models takes Blender 5 and more time. Ask which the organization wants when it matters, and set it with create_site or update_site.
+
 To bring companies from another app the user has connected (a CRM such as HubSpot, a database such as Airtable or Notion, a spreadsheet), use import_companies. Ask which list or view holds the companies the organization publishes (an opt-in field such as "Show on map" is best), read only the fields the map shows, preview with dryRun: true, and write only after the user confirms. Never change anything in the other app. The import_from_app prompt has the steps.`;
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -278,6 +280,9 @@ function localPath(root, p) {
   return existsSync(fromCwd) ? fromCwd : resolve(root, p);
 }
 
+/** The walk world choice, as the tools describe it (site.json walk.world; docs/configuration.md#the-walk-world). */
+const WALK_WORLD = { type: "string", enum: ["campus", "classic"], description: 'The walk world. "campus" (default): a tech campus whose models are built in Blender from code (art/); restyling it takes Blender 5 and more time. "classic": a village built in TypeScript, with live explorers; restyled by editing code, no Blender, fewer steps.' };
+
 /* ---------------- the tools ---------------- */
 
 for (const k of Object.keys(ROW.properties)) if (!ROW_FIELDS.includes(k)) throw new Error(`import_companies: "${k}" is not a field the importer reads`);
@@ -313,6 +318,7 @@ export function builderTools(root = ROOT) {
       map: { title: site.map?.title ?? null, url: site.map?.url ?? null, tagline: site.map?.tagline ?? null },
       networkId: site.network?.id ?? null,
       labels: site.labels ?? null,
+      walkWorld: site.walk?.world ?? "campus",
       example,
       counts: { districts: taxonomy.districts?.length ?? 0, companies: companies.length, people: people.length },
       lacking: { description: lacking((c) => !c.description), logo: lacking((c) => !logos.has(c.slug)), website: lacking((c) => !c.website), services: lacking((c) => !c.services?.length) },
@@ -325,7 +331,7 @@ export function builderTools(root = ROOT) {
     {
       name: "get_status",
       title: "Map status",
-      description: "The map's settings, how many districts and companies it has, what the companies lack (descriptions, logos, websites, services), the validator's problems and warnings, and suggested next steps. Call it first, and after a series of changes.",
+      description: "The map's settings (walkWorld: campus or classic), how many districts and companies it has, what the companies lack (descriptions, logos, websites, services), the validator's problems and warnings, and suggested next steps. Call it first, and after a series of changes.",
       inputSchema: { type: "object", properties: {}, additionalProperties: false },
       hints: { readOnly: true, idempotent: true },
       run: status,
@@ -396,6 +402,7 @@ export function builderTools(root = ROOT) {
           website: text(300, "The organization's https website (the network checks that it vouches for the map)."),
           company: text(40, 'What the map calls one company, lowercase ("startup", "member"). Default "company".'),
           companies: text(40, 'And several ("startups"). Default "companies".'),
+          world: WALK_WORLD,
           confirm: CONFIRM,
           replaceExisting: { type: "boolean" },
         },
@@ -403,7 +410,7 @@ export function builderTools(root = ROOT) {
         additionalProperties: false,
       },
       hints: { destructive: true },
-      run: ({ name, id, url, website, company = "company", companies, replaceExisting = false }) => {
+      run: ({ name, id, url, website, company = "company", companies, world = "campus", replaceExisting = false }) => {
         const site = readJson(root, "site/site.json");
         const count = (readCompanies(root).companies ?? []).length;
         if (site.network?.id !== "example-collective" && count > 0 && !replaceExisting) {
@@ -415,7 +422,7 @@ export function builderTools(root = ROOT) {
         if (!isHttpsUrl(url)) problems.push("url: expected the https address the map will be deployed at");
         if (website !== undefined && !isHttpsUrl(website)) problems.push("website: expected an https address");
         if (problems.length) throw new Refused("the new site's settings are not valid", problems);
-        writeNewSite(root, { name, id: mapId, url, website: website ?? null, company, companies: companies ?? (company === "company" ? "companies" : `${company}s`) });
+        writeNewSite(root, { name, id: mapId, url, website: website ?? null, company, companies: companies ?? (company === "company" ? "companies" : `${company}s`), world });
         return { created: true, id: mapId, status: status() };
       },
     },
@@ -423,7 +430,7 @@ export function builderTools(root = ROOT) {
       name: "update_site",
       title: "Change the map's settings",
       description:
-        "Changes site/site.json: the organization's name and website, the map's title, tagline, description, address, directory link and notice, the words the map uses (labels), the theme colors, and whether the network may show company descriptions. Fields left out stay as they are. Colors must pass their contrast checks.",
+        "Changes site/site.json: the organization's name and website, the map's title, tagline, description, address, directory link and notice, the words the map uses (labels), the theme colors, whether the network may show company descriptions, and the walk world (campus or classic). Fields left out stay as they are. Colors must pass their contrast checks.",
       inputSchema: {
         type: "object",
         properties: {
@@ -446,11 +453,12 @@ export function builderTools(root = ROOT) {
             additionalProperties: false,
           },
           shareDescriptions: { type: "boolean", description: "Whether the network's search may show company descriptions." },
+          walk: { type: "object", properties: { world: WALK_WORLD }, required: ["world"], additionalProperties: false },
         },
         additionalProperties: false,
       },
       hints: { idempotent: true },
-      run: ({ org, map, labels, theme, shareDescriptions }) => {
+      run: ({ org, map, labels, theme, shareDescriptions, walk }) => {
         const site = readJson(root, "site/site.json");
         const next = {
           ...site,
@@ -459,9 +467,10 @@ export function builderTools(root = ROOT) {
           map: { ...site.map, ...map, ...(map?.url && isHttpsUrl(map.url) ? { url: normalizeUrl(map.url) } : {}) },
           labels: { ...site.labels, ...labels },
           theme: { ...site.theme, ...theme },
+          ...(walk ? { walk: { world: walk.world } } : {}),
         };
         const left = guardedWrite(root, { write: new Map([["site/site.json", next]]) }, "this change to site.json");
-        return { written: true, site: { org: next.org, map: next.map, labels: next.labels, theme: next.theme }, validation: summary(left) };
+        return { written: true, site: { org: next.org, map: next.map, labels: next.labels, theme: next.theme, walk: next.walk ?? { world: "campus" } }, validation: summary(left) };
       },
     },
     {

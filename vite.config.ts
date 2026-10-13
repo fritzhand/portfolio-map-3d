@@ -181,11 +181,43 @@ function liveConfig(env: Record<string, string | undefined>) {
  * under a sub-path (GitHub Pages project sites) works without extra settings. The dev server
  * serves at "/"; `vite preview` at the build's base.
  */
+/**
+ * Whether the build links pages of the Nexus's own site (the Nexus and the example map published
+ * with it) on the deployment that serves them rather than on the live site: on for Vercel preview
+ * builds (VERCEL_ENV=preview) and when LINK_THIS_DEPLOYMENT=1, so a preview is self-contained; off
+ * for production, so the live site and every fork keep the Nexus's own address
+ * (federation/protocol.ts onThisDeployment).
+ */
+export function linkThisDeployment(env: Record<string, string | undefined> = process.env): boolean {
+  return env.VERCEL_ENV === "preview" || env.LINK_THIS_DEPLOYMENT === "1";
+}
+
 export function sitePath(command: "build" | "serve", env: Record<string, string | undefined> = process.env): string {
   const explicit = env.BASE_PATH?.trim();
   const raw = explicit || (command === "build" ? new URL(readSite(ROOT).site.map.url).pathname : "/");
   const path = `/${raw.replace(/^\/+|\/+$/g, "")}/`;
   return path === "//" ? "/" : path;
+}
+
+/**
+ * The walk world's vendored scene (src/island) was written for three.js 0.148 and is not ported to
+ * the newer three.js the rest of the app uses: its imports of "three" resolve to a second copy
+ * (the "three-legacy" alias package). Only files under src/island are affected.
+ */
+function legacyThree(): Plugin {
+  return {
+    name: "island-legacy-three",
+    enforce: "pre",
+    async resolveId(source, importer, options) {
+      if (!importer || !/[\\/]src[\\/]island[\\/]/.test(importer)) return null;
+      if (source === "three") return this.resolve("three-legacy", importer, { ...options, skipSelf: true });
+      if (source === "island-iroh-unused") return { id: "\0island-iroh-unused", moduleSideEffects: false };
+      return null;
+    },
+    load(id) {
+      return id === "\0island-iroh-unused" ? "export const IslandNode = class {};" : null;
+    },
+  };
 }
 
 export default defineConfig(({ mode, command, isPreview }) => {
@@ -196,15 +228,17 @@ export default defineConfig(({ mode, command, isPreview }) => {
   return {
     // `vite preview` serves the build, so it takes the build's base.
     base: sitePath(isPreview ? "build" : command),
-    plugins: [publicDataPlugin(), react(), sitePlugin()],
+    plugins: [legacyThree(), publicDataPlugin(), react(), sitePlugin()],
     // No environment variable reaches the browser by prefix (Vite would otherwise expose every VITE_*
     // variable, all at once wherever code reads import.meta.env as an object). Nothing uses this prefix.
     envPrefix: "PORTFOLIO_MAP_CLIENT_ENV_DISABLED_",
-    // The only build-time values in the bundle (read by src/live/presence.ts and src/network.ts).
+    // The only build-time values in the bundle (read by src/live/presence.ts, src/network.ts and
+    // nexus/src/hooks/useNetwork.ts under test).
     define: {
       __LIVE_URL__: JSON.stringify(live.url),
       __LIVE_KEY__: JSON.stringify(live.key),
       __LIVE_CHANNEL__: JSON.stringify(live.channel),
+      __LINK_THIS_DEPLOYMENT__: JSON.stringify(mode !== "test" && linkThisDeployment()),
     },
     build: {
       target: "es2022",

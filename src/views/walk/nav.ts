@@ -33,9 +33,9 @@ export function toBoxFrame(b: Box, x: number, z: number): { lx: number; lz: numb
 }
 
 export const AVATAR_RADIUS = 0.38;
-export const ZOOM_MIN = 8;
+export const ZOOM_MIN = 6;
 export const ZOOM_MAX = 70;
-export const ZOOM_DEFAULT = 22;
+export const ZOOM_DEFAULT = 12;
 
 /** Camera pitch (radians above the horizon) for a follow distance: low and close, high and far. */
 export function pitchFor(distance: number): number {

@@ -22,11 +22,16 @@ as a remote: `git remote add upstream https://github.com/fritzhand/portfolio-map
 ## 2. Make `site/` yours
 
 ```bash
-npm run new-site -- --name "Acme Ventures" --id acme-ventures --url https://map.acme.vc --website https://acme.vc
+npm run new-site -- --name "Acme Ventures" --id acme-ventures --url https://map.acme.vc --website https://acme.vc --world campus
 ```
 
 This rewrites `site/site.json` with your names, empties `site/data/`, and removes the example's
-logos and brand files. Then, in `site/`:
+logos and brand files.
+
+`--world` picks the walk world. `campus` (the default) is the tech campus whose models are built in
+Blender; `classic` is the village built entirely in code, with live explorers, and the cheaper one
+to restyle. You can change it later in `site.json` (`"walk": { "world": "classic" }`);
+[configuration.md](./configuration.md#the-walk-world) compares them. Then, in `site/`:
 
 1. **`site.json`**: what your map calls things (`labels`: "startups" and "tracks" instead of
    "companies" and "districts", say), your colors (`theme`), your logo (`org.logo`, a file in

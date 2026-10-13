@@ -5,7 +5,8 @@
 
    npm run new-site -- --name "Acme Ventures" --id acme-ventures
        --url https://map.acme.vc [--website https://acme.vc]
-       [--company startup --companies startups] [--yes]
+       [--company startup --companies startups]
+       [--world campus|classic] [--yes]
 
    Asks for anything missing when run in a terminal. It writes
    site/site.json with your names, empties site/data/ (no companies,
@@ -28,7 +29,7 @@ const flag = (args, name) => {
 };
 
 /** The new site.json for these answers. */
-export function newSiteConfig({ name, id, url, website = null, company = "company", companies = "companies" }) {
+export function newSiteConfig({ name, id, url, website = null, company = "company", companies = "companies", world = "campus" }) {
   return {
     $schema: "../schema/site.schema.json",
     network: { id, shareDescriptions: true },
@@ -43,6 +44,7 @@ export function newSiteConfig({ name, id, url, website = null, company = "compan
     },
     labels: { company, companies, district: "district", districts: "districts", person: "coach", people: "coaches", hub: name },
     theme: { accent: "#0c7a8c", cta: "#ff3a61", ctaText: "#1d1f24", ink: "#1d1f24" },
+    walk: { world },
     live: { enabled: false, channel: `${id}-walk` },
   };
 }
@@ -80,10 +82,14 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const website = flag(args, "--website") ?? (await ask("Your organization's website (optional)", "")) ?? "";
   const company = flag(args, "--company") ?? "company";
   const companies = flag(args, "--companies") ?? (company === "company" ? "companies" : `${company}s`);
+  const world =
+    flag(args, "--world") ??
+    (await ask("Walk world: campus (built in Blender, the richer look) or classic (built in code, lighter to customize)", "campus"));
   const problems = [];
   if (!name) problems.push("--name is required");
   if (!id || !ID_PATTERN.test(id)) problems.push("--id: lowercase letters, digits and hyphens, 2 to 48 characters");
   if (!url || !/^https:\/\//.test(url)) problems.push("--url: the https address the map will be deployed at");
+  if (world !== "campus" && world !== "classic") problems.push("--world: campus or classic");
   if (problems.length) {
     rl?.close();
     console.error(`new-site: ${problems.join("; ")}`);
@@ -95,7 +101,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     console.error("new-site: nothing changed (pass --yes to run without asking).");
     process.exit(1);
   }
-  writeNewSite(ROOT, { name, id, url, website: website || null, company, companies });
+  writeNewSite(ROOT, { name, id, url, website: website || null, company, companies, world });
   console.log(`new-site: site/ is ready for ${name}. Next:
   1. Edit the districts in site/taxonomy.json.
   2. Add companies: npm run import -- companies.csv --org-records "…"  (or edit site/data/companies.json)

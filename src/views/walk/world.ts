@@ -15,7 +15,7 @@
    area (see areas.ts) is built by the same district code, in the one person color. */
 import * as THREE from "three";
 import { plazaLamps, plazaSeats } from "../../data/hub";
-import { CORE_RADIUS, PLAZA_RADIUS, ROAD_WIDTH, decorPoints, hashString, seededRandom, type AreaSlug, type WorldLayout } from "../../data/layout";
+import { CORE_RADIUS, PLAZA_RADIUS, ROAD_WIDTH, VILLAGE, decorPoints, onRoad, hashString, seededRandom, type AreaSlug, type WorldLayout } from "../../data/layout";
 import { cpuCanvas, cpuContext } from "../../three/cpuCanvas";
 import { labelTexture } from "../../three/logoTexture";
 import { cloudShadowTexture, createToonShared, toonDepthMaterial, toonMaterial, toonify, type ToonShared } from "../../three/toon";
@@ -23,9 +23,15 @@ import { FOLIAGE_BODY, FOLIAGE_KINDS, FOLIAGE_WIND, foliageFarGeometry, foliageG
 import { buildGrass, type GrassField } from "./grass";
 import { buildHub, drawHubGround } from "./hub";
 import { buildPortal } from "./portal";
+import { buildRoads } from "./roads";
+import { buildFinds, findSpots, type Finds } from "./finds";
+import { buildLife } from "./life";
+import { buildScenery } from "./scenery";
+import { buildVillage } from "./village";
 import { mix, type ScenePalette } from "./palette";
 import { buildSea } from "./sea";
 import { buildSky } from "./sky";
+import { LAMP_HEIGHT, lampPost } from "./street";
 import { SEA_LEVEL, type Terrain } from "./terrain";
 import { canvasTexture, clamp, merge, paint, smoothstep, valueNoise2D, withNearFade } from "./util";
 
@@ -63,6 +69,8 @@ export interface World {
   toon: ToonShared;
   /** The grass tufts around the walker (the engine moves them with the walker). */
   grass: GrassField;
+  /** The keepsakes hidden around the island (finds.ts). */
+  finds: Finds;
   /** View-distance range [gone, solid] over which props near the lens dissolve (set per frame by the engine). */
   nearFade: { value: THREE.Vector2 };
   /** Height of each district landmark's top, for label placement. */
@@ -77,7 +85,7 @@ export interface World {
   setDistrictIcon(slug: AreaSlug, svg: string): void;
   /** Replace static scenery in place while retaining the engine's root group and state. */
   setPalette(palette: ScenePalette): void;
-  update(time: number, dt: number, reduced: boolean, cameraYaw: number, cameraAt: THREE.Vector3): void;
+  update(time: number, dt: number, reduced: boolean, cameraYaw: number, cameraAt: THREE.Vector3, walker?: { x: number; z: number }): void;
   dispose(): void;
 }
 
@@ -146,6 +154,8 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   const nearFade = { value: new THREE.Vector2(0, 0) };
   /** Vertex-colored, flat-shaded, toon-lit props that dissolve near the camera. */
   const propMaterial = () => own(toonMaterial({ vertexColors: true, flatShading: true }, { shared: toon, nearFade }));
+  /** Lamp globes: frosted by day, lit (unlit material, its own color) by moonlight. */
+  const glassMaterial = own(p.dark ? new THREE.MeshBasicMaterial({ color: p.lampGlass, toneMapped: false }) : toonMaterial({ color: p.lampGlass }, { shared: toon, nearFade }));
   const coarse = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 
   /* ---------------- sky (it travels with the camera) and light ---------------- */
@@ -283,69 +293,8 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
     root.add(curb);
   }
 
-  /* ---------------- roads ---------------- */
-  {
-    const [cv, ctx] = cpuCanvas(64, 256);
-    const css = (c: THREE.Color) => `#${c.getHexString()}`;
-    ctx.fillStyle = css(p.road);
-    ctx.fillRect(0, 0, 64, 256);
-    const rand = seededRandom(hashString("walk-road"));
-    for (let i = 0; i < 260; i++) {
-      ctx.fillStyle = css(mix(p.road, rand() > 0.5 ? p.sand : p.rock, 0.25 + rand() * 0.2));
-      ctx.globalAlpha = 0.3;
-      ctx.fillRect(rand() * 64, rand() * 256, 2 + rand() * 3, 2 + rand() * 3);
-    }
-    ctx.globalAlpha = 1;
-    // Cream edge lines and a dashed center line.
-    ctx.fillStyle = css(p.roadLine);
-    ctx.fillRect(3, 0, 3, 256);
-    ctx.fillRect(58, 0, 3, 256);
-    for (let y = 16; y < 256; y += 64) ctx.fillRect(30, y, 4, 30);
-    const tex = own(canvasTexture(cv));
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.anisotropy = 8;
-
-    const pos: number[] = [];
-    const uv: number[] = [];
-    const idx: number[] = [];
-    for (const disc of layout.discs) {
-      const r0 = PLAZA_RADIUS - 0.4;
-      const r1 = Math.hypot(disc.x, disc.z) - disc.r + 0.4;
-      const ux = Math.cos(disc.angle);
-      const uz = Math.sin(disc.angle);
-      const nx = -uz * (ROAD_WIDTH / 2);
-      const nz = ux * (ROAD_WIDTH / 2);
-      const len = r1 - r0;
-      const steps = Math.max(1, Math.ceil(len / 6));
-      const base = pos.length / 3;
-      for (let s = 0; s <= steps; s++) {
-        const r = r0 + (len * s) / steps;
-        const cx = ux * r;
-        const cz = uz * r;
-        pos.push(cx - nx, 0.045, cz - nz, cx + nx, 0.045, cz + nz);
-        const v = ((len * s) / steps) / (ROAD_WIDTH * 1.6);
-        uv.push(0, v, 1, v);
-        if (s < steps) {
-          const k = base + s * 2;
-          idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
-        }
-      }
-    }
-    const g = own(new THREE.BufferGeometry());
-    g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-    g.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
-    g.setIndex(idx);
-    g.computeVertexNormals();
-    // Index winding may face down; force normals up.
-    const nrm = g.attributes.normal;
-    for (let i = 0; i < nrm.count; i++) nrm.setXYZ(i, 0, 1, 0);
-    const roads = new THREE.Mesh(
-      g,
-      own(toonMaterial({ map: tex, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 }, { shared: toon })),
-    );
-    roads.receiveShadow = true;
-    root.add(roads);
-  }
+  /* ---------------- roads (roads.ts): to every district, and the village's ring street ---------------- */
+  root.add(buildRoads(layout, p, toon, own).group);
 
   /* ---------------- districts: ground patches, rings, landmarks, arches ---------------- */
   const emblems: { mesh: THREE.Group; base: number; phase: number; canvas: HTMLCanvasElement; tex: THREE.CanvasTexture; color: string }[] = [];
@@ -379,14 +328,34 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
       flatAt(new THREE.CircleGeometry(CORE_RADIUS - 0.4, 48), disc.x, 0.038, disc.z, mix(p.plaza, col, 0.08));
       flatAt(new THREE.RingGeometry(CORE_RADIUS - 0.4, CORE_RADIUS, 48), disc.x, 0.04, disc.z, mix(col, p.plaza, 0.15));
 
-      // Landmark: a stepped stone plinth, an obelisk in the district color, a capstone.
-      solidAt(new THREE.CylinderGeometry(2.3, 2.5, 0.3, 6), disc.x, 0.15, disc.z, stoneDark);
-      solidAt(new THREE.CylinderGeometry(1.85, 2.05, 0.35, 6), disc.x, 0.47, disc.z, stone);
-      solidAt(new THREE.CylinderGeometry(0.62, 1.05, 5.4, 4), disc.x, 3.35, disc.z, col, Math.PI / 4);
-      solidAt(new THREE.CylinderGeometry(1.1, 1.1, 0.22, 4), disc.x, 0.75, disc.z, mix(col, p.ink, 0.25), Math.PI / 4);
-      solidAt(new THREE.ConeGeometry(0.72, 0.9, 4), disc.x, 6.5, disc.z, mix(col, p.plaza, 0.55), Math.PI / 4);
-      colliders.push({ x: disc.x, z: disc.z, r: 2.2, h: 9.6 });
-      blockers.push({ x: disc.x, z: disc.z, r: 2.4, h: 9.6 });
+      // Landmark: a six-sided gazebo on a stone plinth, slim cream posts and a railing (open
+      // toward the road) under a pointed roof in the district color; the medallion floats above.
+      const cream = mix(p.wallCream, p.plaza, 0.4);
+      solidAt(new THREE.CylinderGeometry(3.3, 3.5, 0.3, 6), disc.x, 0.15, disc.z, stoneDark);
+      solidAt(new THREE.CylinderGeometry(2.95, 3.1, 0.24, 6), disc.x, 0.42, disc.z, stone);
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + Math.PI / 6;
+        const px = disc.x + Math.cos(a) * 2.6;
+        const pz = disc.z + Math.sin(a) * 2.6;
+        solidAt(new THREE.CylinderGeometry(0.13, 0.16, 3.4, 6), px, 2.35, pz, cream);
+        solidAt(new THREE.BoxGeometry(0.4, 0.2, 0.4), px, 0.66, pz, stoneDark);
+        // A railing between the posts, with a gap on the road side.
+        const a2 = a + Math.PI / 6;
+        const rx = disc.x + Math.cos(a2) * 2.6;
+        const rz = disc.z + Math.sin(a2) * 2.6;
+        const toRoad = disc.angle + Math.PI;
+        const open = Math.abs(Math.atan2(Math.sin(a2 - toRoad), Math.cos(a2 - toRoad))) < 0.35;
+        if (!open) {
+          solidAt(new THREE.BoxGeometry(2.6, 0.1, 0.1), rx, 1.35, rz, cream, -a2 - Math.PI / 2);
+          solidAt(new THREE.BoxGeometry(2.6, 0.08, 0.08), rx, 0.9, rz, mix(cream, col, 0.3), -a2 - Math.PI / 2);
+        }
+        colliders.push({ x: px, z: pz, r: 0.32, h: 3.6 });
+      }
+      solidAt(new THREE.CylinderGeometry(3.15, 3.3, 0.3, 6), disc.x, 4.25, disc.z, mix(col, p.ink, 0.25));
+      solidAt(new THREE.ConeGeometry(3.6, 2.0, 6), disc.x, 5.4, disc.z, col);
+      solidAt(new THREE.CylinderGeometry(0.1, 0.18, 0.7, 6), disc.x, 6.65, disc.z, cream);
+      solidAt(new THREE.SphereGeometry(0.26, 8, 6), disc.x, 7.1, disc.z, mix(col, p.plaza, 0.4));
+      blockers.push({ x: disc.x, z: disc.z, r: 3.4, h: 7.2 });
       // Four bollards around the core.
       for (let i = 0; i < 4; i++) {
         const a = disc.angle + Math.PI / 4 + (i * Math.PI) / 2;
@@ -485,28 +454,46 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   const portal = buildPortal(p, own, nearFade);
   root.add(portal.group);
 
+  /* ---------------- the village: houses, street lamps and wires, bus shelters (village.ts) ---------------- */
+  const village = buildVillage(layout, p, own, { prop: propMaterial, glass: glassMaterial });
+  root.add(village.group);
+  colliders.push(...village.colliders);
+  boxes.push(...village.boxes);
+  blockers.push(...village.blockers);
+
+  /* ---------------- the set pieces out in the hills and on the coast (scenery.ts) ---------------- */
+  const scenery = buildScenery(layout, terrain, p, own, {
+    prop: propMaterial,
+    glass: glassMaterial,
+    lit: own(new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false })),
+  });
+  root.add(scenery.group);
+  colliders.push(...scenery.colliders);
+  boxes.push(...scenery.boxes);
+  blockers.push(...scenery.blockers);
+
+  /* ---------------- gulls, butterflies, motes, a balloon, a cat (life.ts) ---------------- */
+  const life = buildLife(layout, terrain, p, own, toon, coarse);
+  root.add(life.group);
+
   /* ---------------- plaza furniture: lamps, benches, planters ---------------- */
   {
     const lampSpots = plazaLamps(layout);
-    const iron = mix(p.navy, p.ink, 0.35);
-    const lampParts = [
-      paint(new THREE.CylinderGeometry(0.06, 0.1, 3.2, 6).translate(0, 1.6, 0), iron),
-      paint(new THREE.CylinderGeometry(0.2, 0.24, 0.2, 8).translate(0, 0.1, 0), iron),
-      paint(new THREE.ConeGeometry(0.34, 0.26, 8).translate(0, 3.64, 0), iron),
-    ];
-    const lampGeo = own(merge(lampParts));
+    const lampPost_ = lampPost(p, false);
+    const lampGeo = own(merge(lampPost_.iron));
     const lampMat = propMaterial();
     const lamps = new THREE.InstancedMesh(lampGeo, lampMat, lampSpots.length);
     // The globes: frosted glass by day, lit (unlit material, its own color) by moonlight.
-    const globeGeo = own(new THREE.SphereGeometry(0.28, 10, 8).translate(0, 3.35, 0));
-    const globeMat = own(p.dark ? new THREE.MeshBasicMaterial({ color: p.lampGlass, toneMapped: false }) : toonMaterial({ color: p.lampGlass }, { shared: toon, nearFade }));
+    const globeGeo = own(merge(lampPost_.glass));
+    const globeMat = glassMaterial;
     const globes = new THREE.InstancedMesh(globeGeo, globeMat, lampSpots.length);
     const m4 = new THREE.Matrix4();
     lampSpots.forEach((l, i) => {
-      m4.makeTranslation(l.x, 0, l.z);
+      // The arm reaches toward the plaza's center.
+      m4.makeRotationY(Math.PI - Math.atan2(l.z, l.x)).setPosition(l.x, 0, l.z);
       lamps.setMatrixAt(i, m4);
       globes.setMatrixAt(i, m4);
-      colliders.push({ x: l.x, z: l.z, r: 0.3, h: 3.9 });
+      colliders.push({ x: l.x, z: l.z, r: 0.3, h: LAMP_HEIGHT });
     });
     lamps.castShadow = true;
     root.add(lamps, globes);
@@ -557,7 +544,9 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   /* ---------------- plants and rocks (foliage.ts), instanced per tile ---------------- */
   const plantTiles: { mesh: THREE.InstancedMesh; near: THREE.BufferGeometry; far: THREE.BufferGeometry; center: THREE.Vector3; radius: number }[] = [];
   {
-    const items = decorPoints(layout, coarse ? 520 : 640, hashString("walk-decor"));
+    const items: { x: number; z: number; s: number; k: number; kind?: FoliageKind }[] = decorPoints(layout, coarse ? 620 : 760, hashString("walk-decor"));
+    // The village's own plantings (between its houses, flanking the road mouths) join the scatter.
+    for (const v of village.plants) items.push({ x: v.x, z: v.z, s: v.s, k: 0, kind: v.kind });
     type Spot = { x: number; z: number; s: number; y: number; rot: number; tint: number };
     const tiles = new Map<string, Record<FoliageKind, Spot[]>>();
     const rand = seededRandom(hashString("walk-decor-jitter"));
@@ -568,13 +557,16 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
       if (y < SEA_LEVEL + 0.1) continue;
       // Palms along the coast; broad crowns more often than pines inside the ring of districts; some shrubs in bloom.
       const coastal = r > terrain.shoreAt(a) - 20;
-      let kind: FoliageKind = it.k === 0 ? "oak" : it.k === 1 ? "pine" : it.k === 2 ? "shrub" : "rock";
-      if (coastal && (kind === "oak" || kind === "pine")) kind = "palm";
-      else if (!coastal && r < layout.ringRadius && kind === "pine" && rand() < 0.5) kind = "oak";
-      if (kind === "shrub" && rand() < 0.35) kind = "flowers";
+      let kind: FoliageKind = it.kind ?? (it.k === 0 ? "oak" : it.k === 1 ? "pine" : it.k === 2 ? "shrub" : "rock");
+      if (!it.kind) {
+        if (coastal && (kind === "oak" || kind === "pine")) kind = "palm";
+        else if (!coastal && r < layout.ringRadius && kind === "pine" && rand() < 0.5) kind = "oak";
+        else if (!coastal && kind === "pine" && rand() < 0.4) kind = "cypress";
+        if (kind === "shrub" && rand() < 0.35) kind = "flowers";
+      }
       const key = `${Math.floor(it.x / DECOR_TILE)},${Math.floor(it.z / DECOR_TILE)}`;
       let tile = tiles.get(key);
-      if (!tile) tiles.set(key, (tile = { oak: [], pine: [], palm: [], shrub: [], flowers: [], rock: [] }));
+      if (!tile) tiles.set(key, (tile = { oak: [], pine: [], palm: [], cypress: [], shrub: [], flowers: [], rock: [] }));
       tile[kind].push({ x: it.x, z: it.z, s: it.s, y, rot: rand() * Math.PI * 2, tint: rand() });
       const body = FOLIAGE_BODY[kind];
       // Canopies are wider than trunks: the camera clears the crown, the walker only bumps the trunk.
@@ -628,6 +620,26 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   const grass = buildGrass(layout, terrain, p, toon, coarse);
   root.add(grass.mesh);
 
+  /* ---------------- the keepsakes, each in the open beside a set piece (finds.ts) ---------------- */
+  const blockedAt = (x: number, z: number): boolean => {
+    const r = Math.hypot(x, z);
+    if (r < VILLAGE.outer + 2 || r > layout.islandRadius - 10) return true;
+    if (terrain.heightAt(x, z) < SEA_LEVEL + 0.4) return true;
+    if (onRoad(layout, x, z, 1.5)) return true;
+    if (layout.discs.some((d) => Math.hypot(x - d.x, z - d.z) < d.r + 3)) return true;
+    if (colliders.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + 1.4)) return true;
+    for (const b of boxes) {
+      const c = Math.cos(b.rot ?? 0);
+      const s = Math.sin(b.rot ?? 0);
+      const lx = (x - b.x) * c - (z - b.z) * s;
+      const lz = (x - b.x) * s + (z - b.z) * c;
+      if (Math.abs(lx) < b.hx + 1.4 && Math.abs(lz) < b.hz + 1.4) return true;
+    }
+    return false;
+  };
+  const finds = buildFinds(findSpots(layout, scenery.anchors, blockedAt), terrain, p);
+  root.add(finds.group);
+
   // Every other lit prop (the hub, the portal's frame and plinth) takes the same toon light.
   toonify(root, toon);
 
@@ -645,7 +657,7 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
 
   /* ---------------- per-frame ---------------- */
   const near = new THREE.Vector3();
-  function update(time: number, _dt: number, reduced: boolean, cameraYaw: number, cameraAt: THREE.Vector3) {
+  function update(time: number, dt: number, reduced: boolean, cameraYaw: number, cameraAt: THREE.Vector3, walker?: { x: number; z: number }) {
     // Under reduced motion the clouds, the water and the wind hold still.
     const t = reduced ? 0 : time;
     sky.update(t, cameraAt);
@@ -661,6 +673,8 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
     // The hub's rooftop sign turns to face the camera (a yaw, not motion: kept under reduced motion).
     hub.update(cameraYaw);
     portal.update(time, reduced);
+    scenery.update(time, reduced);
+    life.update(time, dt, reduced, walker ?? { x: cameraAt.x, z: cameraAt.z });
     for (const e of emblems) {
       e.mesh.rotation.y = cameraYaw;
       e.mesh.position.y = reduced ? e.base : e.base + Math.sin(time * 1.1 + e.phase) * 0.18;
@@ -670,6 +684,10 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
   function dispose() {
     hub.dispose();
     portal.dispose();
+    village.dispose();
+    scenery.dispose();
+    finds.dispose();
+    life.dispose();
     sky.dispose();
     sea.dispose();
     grass.dispose();
@@ -693,6 +711,7 @@ function buildWorldParts(layout: WorldLayout, districts: readonly AreaLook[], te
     hubOccluder: hub.occluder,
     toon,
     grass,
+    finds,
     setDistrictIcon,
     update,
     dispose,
