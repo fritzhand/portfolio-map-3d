@@ -1,7 +1,10 @@
 /* The network snapshot: nexus/public/network.json, or the fictional sample with ?sample (the
-   sample is a separate chunk, loaded only then). */
+   sample is a separate chunk, loaded only then). A preview build links the maps published with the
+   Nexus on the deployment that serves it (servedFrom), so a preview opens its own copy of them. */
 import { useEffect, useState } from "react";
-import { buildNetwork, SnapshotError, type NetworkModel } from "../lib/network.ts";
+import { buildNetwork, servedFrom, SnapshotError, type NetworkModel } from "../lib/network.ts";
+
+declare const __LINK_THIS_DEPLOYMENT__: boolean;
 
 export type NetworkState = { status: "loading" } | { status: "ready"; model: NetworkModel; sample: boolean } | { status: "error"; message: string };
 
@@ -18,7 +21,9 @@ export function useNetwork(sample: boolean, attempt: number): NetworkState {
         });
     load
       .then((snapshot) => {
-        if (alive) setState({ status: "ready", model: buildNetwork(snapshot), sample });
+        if (!alive) return;
+        const model = buildNetwork(snapshot);
+        setState({ status: "ready", model: __LINK_THIS_DEPLOYMENT__ ? servedFrom(model, window.location.href) : model, sample });
       })
       .catch((e: unknown) => {
         if (!alive) return;

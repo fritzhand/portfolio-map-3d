@@ -22,8 +22,9 @@ build) checks them.
 | `theme.accent` | Links, focus rings, the globe's documented connections, the hub's band. 4.5:1 or more on white. |
 | `theme.cta`, `theme.ctaText` | The call-to-action fill (Find a provider) and its text: 4.5:1 or more against each other. |
 | `theme.ink` | Your dark ink: label text, the dark plate for white-on-transparent logos. 7:1 or more on white. |
-| `live.enabled`, `live.channel` | Live explorers in the walk world ([live-explorers.md](./live-explorers.md)). |
-| `walk` (optional) | The walk world's optional parts, each on unless set to `false`: `village` (the houses and street furniture around the plaza), `setPieces` (`true`, `false` or a list of kinds, like `["lighthouse", "orchard"]`), `keepsakes`, `wildlife`, `sound`. See [walk-world.md](./walk-world.md). |
+| `walk.world` | The walk world: `"campus"` (the default when it is left out) or `"classic"` ([below](#the-walk-world)). |
+| `walk.village`, `walk.setPieces`, `walk.keepsakes`, `walk.wildlife`, `walk.sound` | The classic world's optional parts, each on unless set to `false` ([walk-world.md](./walk-world.md#turning-parts-on-and-off)). The campus ignores them. |
+| `live.enabled`, `live.channel` | Live explorers in the classic walk world ([live-explorers.md](./live-explorers.md)). |
 
 The validator checks every contrast it names and explains how to fix one that fails.
 
@@ -64,16 +65,79 @@ A file whose name matches no slug fails validation (it would ship unused).
 
 ## The walk world
 
-The hub at the center of the plaza is a generic pavilion that carries your logo on a rooftop sign
-and `labels.hub` over its entrance; the portal to the Nexus stands beside it. To model your own
-building, replace `src/data/hub.ts` and `src/views/walk/hub.ts` together, keeping their exports
-(the collision, camera and minimap code reads them). The districts stand on a ring around the
-plaza, each sized by its company count; nothing in the walk world claims to show where a company
-is.
+A map has one of two walk worlds, chosen in `site.json`:
 
-Around the plaza runs a ring street with houses on its outer side (`src/views/walk/village.ts`);
-the roads to the districts cross it through gaps the houses leave open. Every district is crowned
-by a gazebo in its color. Between the districts, on the coast and in the hills, stand a lighthouse,
-a pier, a beach, a windmill, a farm, a campsite and a water tower (`scenery.ts`), one or two per
-wedge, and five keepsakes are hidden beside them (`finds.ts`; what a visitor found stays in their
-browser). All of it is decoration: no data reads it and nothing in it points at a company.
+```json
+"walk": { "world": "campus" }
+```
+
+Both come with the framework, and a visit loads only the chosen one. They read the same data
+(districts, companies, people, labels, theme) and keep the same rules: districts are groupings,
+never addresses, and nothing in either world claims to show where a company is. Both have the
+portal to the Nexus on the plaza. In development, `?world=classic` or `?world=campus` on the walk
+view tries the other one without changing `site.json`.
+
+| | `campus` (default) | `classic` |
+|---|---|---|
+| Built from | Blender build scripts ([`art/`](../art/README.md)) exported as compressed models, placed by `src/island` | TypeScript only (`src/views/walk`): no model files, no Blender |
+| To restyle | Edit the Blender scripts, rebuild with `npm run art` (Blender 5), check them side by side with `art/preview.py` | Edit the TypeScript |
+| Effort | More: the richer look takes Blender, time, and more tokens when an AI assistant does it | Less: code edits only, fewer steps and tokens |
+| Live explorers | Not yet | Yes ([live-explorers.md](./live-explorers.md)) |
+
+### The campus
+
+An island laid out as a campus. The organization's monument stands at the middle of the plaza with
+its name on a plaque, and the portal to the Nexus beside it. A road runs out to each district,
+through a gateway with the district's name; a pylon behind it carries the name across the island.
+Every district has a landmark at its heart and a screen totem for each company, with the company's
+logo on both screens; the people area has a pavilion and a post for each person.
+
+A district's landmark follows its theme: `greenhouse`, `garden`, `workshop`, `lab`, `market`,
+`bank`, `harbor`, `studio` or `school`. Set one in `site/taxonomy.json`:
+
+```json
+{ "slug": "climate", "label": "Climate & Energy", "short": "Climate", "color": "#7a9a01", "icon": "leaf", "theme": "greenhouse", "industries": [] }
+```
+
+A district without one gets the theme its icon suggests (`leaf` a greenhouse, `cpu` a workshop,
+`landmark` a bank...; the list is in `src/island/themes.json`), or one its neighbors are not using.
+The classic world ignores `theme`.
+
+Between the districts stand homes, parks and courts, a shuttle loops the ring street, and round the
+rim stand a marina you can walk out on, a beacon, a wind turbine, a vertical farm, a solar field, a
+data center and an observatory. All of it is decoration: no data reads it and nothing in it points
+at a company. The campus follows the site's theme: daylight in the light theme, the campus at night
+in the dark one.
+
+### The classic world
+
+A village on an island, built entirely in code: every building, prop and animal is made of painted,
+faceted shapes, the sky and sea are shaders, and the sound is synthesized. The hub at the center of
+the plaza is a pavilion that carries your logo on a rooftop sign and `labels.hub` over its entrance;
+the portal to the Nexus stands beside it. To model your own building, replace `src/data/hub.ts` and
+`src/views/walk/hub.ts` together, keeping their exports (the collision, camera and minimap code
+reads them).
+
+Around the plaza runs a ring street with houses on its outer side (`src/views/walk/village.ts`), and
+the plaza has a fountain, market stalls, an ice-cream cart, a kiosk and a bike rack. The districts
+stand on a ring beyond it, each sized by its company count and crowned by a gazebo in its color,
+with a drop pin and logo badge for every company; fingerposts at the road mouths and a Walking times
+board at the arrival point the way. Between the districts, on the coast and in the hills, stand the
+set pieces, one or two per wedge (`src/views/walk/pieces.ts`): a lighthouse, a pier, a beach, beach
+huts, a boathouse, a windmill, a farm, a campsite, a water tower, an orchard, an observatory and a
+greenhouse. Five keepsakes hide beside them for visitors to find (`finds.ts`; what a visitor found
+stays in their browser). Each explorer gets a generated hat and gear ("New look" draws another),
+can summon a car, and with live explorers on sees everyone else walking the map. An afternoon in
+the light theme, moonlight in the dark one.
+
+The village, the set pieces (all, none, or the kinds you list), the keepsakes, the wildlife and the
+sound can each be switched off in `site.json`:
+
+```json
+"walk": { "world": "classic", "setPieces": ["lighthouse", "pier", "beach", "windmill", "orchard"], "wildlife": false }
+```
+
+[walk-world.md](./walk-world.md) covers these switches, how the island is laid out, and how to add
+your own pieces; `/?kit` shows every model the classic world is made of. All of it is decoration: no
+data reads it and nothing in it points at a company.
+

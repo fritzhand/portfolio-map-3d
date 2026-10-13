@@ -37,6 +37,9 @@ export default defineConfig({
   plugins: [react(), nexusUrlPlugin()],
   // No environment variable reaches the browser by prefix: the Nexus needs none.
   envPrefix: "NEXUS_CLIENT_ENV_DISABLED_",
+  // The one build-time value: link the maps published with the Nexus on this deployment
+  // (previews only; ../vite.config.ts linkThisDeployment).
+  define: { __LINK_THIS_DEPLOYMENT__: JSON.stringify(process.env.VERCEL_ENV === "preview" || process.env.LINK_THIS_DEPLOYMENT === "1") },
   server: {
     port: 5180,
     // ../federation (the protocol) and ../node_modules live outside the Vite root.

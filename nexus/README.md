@@ -65,6 +65,12 @@ Nexus at the root (the default base, `/`), with the example map next to it at `/
 scheduled workflow (`.github/workflows/nexus-refresh.yml`) rebuilds it daily through a deploy hook.
 Setup steps: [docs/deploying.md](../docs/deploying.md#the-nexus).
 
+A preview deployment is self-contained. In a Vercel preview build (`VERCEL_ENV=preview`, or
+`LINK_THIS_DEPLOYMENT=1` for a local check) the Nexus links the example map on the preview's own
+`/example/`, and the example map's Nexus links (top bar, About panel, portal) open the preview's
+Nexus (`onThisDeployment` in `federation/protocol.ts`). Production builds link the live addresses,
+so `wearenexus.xyz` and every other map are unchanged.
+
 The Nexus also works under a path. `vite.config.ts` reads `NEXUS_BASE` (default `/`), and every
 URL the app builds goes through `import.meta.env.BASE_URL`: `network.json`, logos, the favicon,
 the example map link and in-app navigation. All addresses are query strings on the base path, so

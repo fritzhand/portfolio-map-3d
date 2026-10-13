@@ -33,6 +33,9 @@
     "ctaText": "#1d1f24",
     "ink": "#1d1f24"
   },
+  "walk": {
+    "world": "campus"
+  },
   "live": {
     "enabled": false,
     "channel": "example-collective-walk"

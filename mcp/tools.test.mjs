@@ -44,6 +44,7 @@ describe("the builder's tools", () => {
     expect(s.counts).toMatchObject({ districts: 6, companies: 29 });
     expect(s.validation.ok).toBe(true);
     expect(s.next[0]).toMatch(/create_site/);
+    expect(s.walkWorld).toBe("campus");
   });
 });
 
@@ -276,19 +277,47 @@ describe("site settings", () => {
     expect(site.org.name).toBe("Example Collective");
   });
 
+  it("update_site switches the walk world, and refuses one that does not exist", async () => {
+    const r = await call("update_site", { walk: { world: "classic" } });
+    expect(r.site.walk).toEqual({ world: "classic" });
+    expect(JSON.parse(readFileSync(join(root, "site", "site.json"), "utf8")).walk).toEqual({ world: "classic" });
+    expect((await call("get_status", {})).walkWorld).toBe("classic");
+    await expect(call("update_site", { walk: { world: "village" } })).rejects.toBeInstanceOf(ToolInputError);
+    await call("update_site", { walk: { world: "campus" } });
+  });
+
+  it("update_site repairs a walk value written by hand as a string", async () => {
+    const path = join(root, "site", "site.json");
+    const broken = JSON.parse(readFileSync(path, "utf8"));
+    broken.walk = "classic";
+    writeFileSync(path, JSON.stringify(broken, null, 2));
+    await call("update_site", { walk: { world: "classic" } });
+    expect(JSON.parse(readFileSync(path, "utf8")).walk).toEqual({ world: "classic" });
+    await call("update_site", { walk: { world: "campus" } });
+  });
+
   it("update_site turns the walk world's parts on and off, and keeps to the known set pieces", async () => {
     const r = await call("update_site", { walk: { wildlife: false, setPieces: ["lighthouse", "orchard"] } });
-    expect(r.site.walk).toEqual({ wildlife: false, setPieces: ["lighthouse", "orchard"] });
+    expect(r.site.walk).toEqual({ world: "campus", wildlife: false, setPieces: ["lighthouse", "orchard"] });
     await call("update_site", { walk: { sound: false } });
     const site = JSON.parse(readFileSync(join(root, "site", "site.json"), "utf8"));
-    expect(site.walk).toEqual({ wildlife: false, setPieces: ["lighthouse", "orchard"], sound: false });
+    expect(site.walk).toEqual({ world: "campus", wildlife: false, setPieces: ["lighthouse", "orchard"], sound: false });
     await expect(call("update_site", { walk: { setPieces: ["castle"] } })).rejects.toThrow(/walk\.setPieces: unknown kind "castle"/);
+  });
+
+  it("update_site keeps the classic world's parts when it switches the world, and the world when it changes a part", async () => {
+    await call("update_site", { walk: { world: "classic", keepsakes: false } });
+    await call("update_site", { walk: { village: false } });
+    await call("update_site", { walk: { world: "campus" } });
+    expect(JSON.parse(readFileSync(join(root, "site", "site.json"), "utf8")).walk).toEqual({ world: "campus", keepsakes: false, village: false });
+    expect((await call("get_status", {})).validation.errors).toEqual([]);
   });
 
   it("create_site needs confirm, replaces the example, and protects a real map", async () => {
     await expect(call("create_site", { name: "Acme Ventures", url: "https://map.acme.vc" })).rejects.toBeInstanceOf(ToolInputError);
-    const r = await call("create_site", { name: "Acme Ventures", url: "https://map.acme.vc/", website: "https://acme.vc", company: "startup", confirm: true });
+    const r = await call("create_site", { name: "Acme Ventures", url: "https://map.acme.vc/", website: "https://acme.vc", company: "startup", world: "classic", confirm: true });
     expect(r).toMatchObject({ created: true, id: "acme-ventures" });
+    expect(r.status.walkWorld).toBe("classic");
     expect(r.status.counts.companies).toBe(0);
     expect(JSON.parse(readFileSync(join(root, "site", "site.json"), "utf8")).map.url).toBe("https://map.acme.vc");
     await call("upsert_company", { name: "Northwind Labs", district: "hardware", sources: [PAGE] });

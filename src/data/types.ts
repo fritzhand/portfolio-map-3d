@@ -98,6 +98,8 @@ export interface District {
   industries: string[];
   /** Plain-language note on what belongs here, for editors; optional. */
   note?: string;
+  /** The landmark at its heart in the walk world (src/island/themes.json); optional, its icon suggests one. */
+  theme?: string;
 }
 
 export interface Vocab {

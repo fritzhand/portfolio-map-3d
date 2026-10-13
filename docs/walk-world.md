@@ -1,6 +1,11 @@
-# The walk world
+# The classic walk world
 
-The walk world is an island built from your data: your hub on a central plaza, a village around it,
+This guide covers the classic walk world, the one a site chooses with `"walk": { "world": "classic" }`
+in `site/site.json`. The default, the campus, is built differently: its models come from Blender
+build scripts ([art/README.md](../art/README.md)), and [configuration.md](./configuration.md#the-walk-world)
+compares the two. The switches below apply to the classic world only.
+
+The classic world is an island built from your data: your hub on a central plaza, a village around it,
 one neighborhood per district on a ring with a pin for every company, roads out to them, and beyond
 them hills rolling down to a beach, with set pieces to wander to. Nothing in it is a model, texture
 or sound file: every building, prop and animal is made of painted, faceted shapes in code, the sky

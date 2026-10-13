@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { NEXUS_META, NEXUS_URL, nexusHref } from "../federation/protocol.ts";
-import config from "../vite.config.ts";
+import config, { linkThisDeployment } from "../vite.config.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const html = readFileSync(join(root, "index.html"), "utf8");
@@ -87,5 +87,15 @@ describe("vercel.json", () => {
 
   it("redirects to no host but the map's own", () => {
     for (const r of vercel.redirects ?? []) expect(new URL(r.destination.replace("$1", "")).origin).toBe(new URL(site.map.url).origin);
+  });
+});
+
+describe("links on a preview deployment", () => {
+  it("links the Nexus's own site on the serving deployment in preview builds only, never in production", () => {
+    expect(linkThisDeployment({ VERCEL_ENV: "preview" })).toBe(true);
+    expect(linkThisDeployment({ LINK_THIS_DEPLOYMENT: "1" })).toBe(true);
+    expect(linkThisDeployment({ VERCEL_ENV: "production" })).toBe(false);
+    expect(linkThisDeployment({ VERCEL_ENV: "development" })).toBe(false);
+    expect(linkThisDeployment({})).toBe(false);
   });
 });
