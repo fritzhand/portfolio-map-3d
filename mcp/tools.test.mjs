@@ -156,6 +156,77 @@ describe("import_companies_csv", () => {
     const path = csv("name,district\nNorthwind Labs,hardware\n");
     await expect(call("import_companies_csv", { path, source: PAGE, mode: "replace" })).rejects.toThrow(/confirm/);
   });
+
+  it("previews with dryRun and writes nothing", async () => {
+    const before = companyFile();
+    const path = csv("name,district,Emails\nNorthwind Labs,hardware,\n");
+    const r = await call("import_companies_csv", { path, source: PAGE, dryRun: true });
+    expect(r).toMatchObject({ dryRun: true, written: false, created: ["northwind-labs"] });
+    expect(r.ignoredColumns.join(" ")).toContain('"Emails"');
+    expect(companyFile()).toBe(before);
+  });
+});
+
+describe("import_companies", () => {
+  const SOURCE = { kind: "org-records", title: "HubSpot: Show on map, read for Example Collective on 2026-10-13" };
+
+  it("imports rows read from another app, by district label, with the one source", async () => {
+    const rows = [{ name: "Northwind Labs", district: "Hardware & Robotics", website: "northwind.example", founders: ["Ana Ruiz (CEO and Co-Founder)", "Li Wei"], tags: "robots; farms", location: null }];
+    const r = await call("import_companies", { rows, source: SOURCE });
+    expect(r).toMatchObject({ dryRun: false, written: true, imported: 1, created: ["northwind-labs"], counts: { created: 1, updated: 0 } });
+    const c = companies().find((x) => x.slug === "northwind-labs");
+    expect(c).toMatchObject({ district: "hardware", website: "https://northwind.example", tags: ["robots", "farms"], location: null, sources: [{ ...SOURCE, retrieved: today }] });
+    expect(c.founders.map((f) => [f.name, f.title])).toEqual([["Ana Ruiz", "CEO and Co-Founder"], ["Li Wei", "Founder"]]);
+    expect(companies().length).toBe(30);
+  });
+
+  it("previews with dryRun: what it would create and change, and writes nothing", async () => {
+    const before = companyFile();
+    const first = companies()[0];
+    const rows = [{ name: "Northwind Labs", district: "hardware" }, { name: first.name, district: first.district, location: "Tampa, Florida" }];
+    const r = await call("import_companies", { rows, source: SOURCE, dryRun: true });
+    expect(r).toMatchObject({ dryRun: true, written: false, imported: 2, created: ["northwind-labs"], updated: [first.slug], counts: { created: 1, updated: 1, unchanged: 0, removed: 0 } });
+    expect(r.changes[first.slug]).toEqual(expect.arrayContaining(["location", "sources"]));
+    expect(r.sample.map((c) => c.slug)).toEqual(["northwind-labs", first.slug]);
+    expect(r.next).toMatch(/Nothing was written/);
+    expect(companyFile()).toBe(before);
+  });
+
+  it("refuses a field the map does not show, so contact data never arrives", async () => {
+    const before = companyFile();
+    const rows = [{ name: "Northwind Labs", district: "hardware", email: "ana@northwind.example", owner: "Jane" }];
+    const err = await call("import_companies", { rows, source: SOURCE, dryRun: true }).catch((e) => e);
+    expect(err).toBeInstanceOf(ToolInputError);
+    expect(err.message).toMatch(/rows\[0\]\.email: not a field this tool takes/);
+    expect(err.message).toMatch(/rows\[0\]\.owner: not a field this tool takes/);
+    expect(companyFile()).toBe(before);
+  });
+
+  it("stops at an email address or phone number in a field it copies, naming the row, even in a preview", async () => {
+    const before = companyFile();
+    const rows = [{ name: "Northwind Labs", district: "hardware" }, { name: "Beta Pay", district: "fintech", description: "Write to ana@beta.example", tags: ["Call 813-555-0100"] }];
+    for (const dryRun of [true, false]) {
+      await expect(call("import_companies", { rows, source: SOURCE, dryRun })).rejects.toThrow(/rows\[1\], description: holds an email address[\s\S]*rows\[1\], tags: holds a phone number/);
+    }
+    expect(companyFile()).toBe(before);
+  });
+
+  it("stops at a district the map does not have", async () => {
+    await expect(call("import_companies", { rows: [{ name: "Northwind Labs", district: "Space" }], source: SOURCE })).rejects.toThrow(/rows\[0\]: district "Space" is not in site\/taxonomy\.json/);
+  });
+
+  it("previews a replace without confirm, and writes one only with it", async () => {
+    const before = companyFile();
+    // Keep the companies that have logos: a replace that drops them would leave their files unused.
+    const withLogos = new Set(readdirSync(join(root, "site", "logos")).map((f) => f.replace(/\.[^.]+$/, "")));
+    const kept = companies().filter((c) => withLogos.has(c.slug)).map((c) => ({ slug: c.slug, name: c.name, district: c.district }));
+    const rows = [...kept, { name: "Northwind Labs", district: "hardware" }];
+    const r = await call("import_companies", { rows, source: SOURCE, mode: "replace", dryRun: true });
+    expect(r.counts).toMatchObject({ created: 1, removed: 29 - kept.length });
+    expect(r.removed.length).toBe(29 - kept.length);
+    expect(companyFile()).toBe(before);
+    await expect(call("import_companies", { rows, source: SOURCE, mode: "replace" })).rejects.toThrow(/confirm/);
+  });
 });
 
 describe("add_logo", () => {

@@ -34,6 +34,23 @@ describe("the MCP server", () => {
   it("introduces itself with the content contract's rules", () => {
     expect(client.getServerVersion()).toMatchObject({ name: "portfolio-map" });
     expect(client.getInstructions()).toMatch(/Never invent/);
+    expect(client.getInstructions()).toMatch(/import_companies[\s\S]*dryRun: true[\s\S]*Never change anything in the other app/);
+  });
+
+  it("offers the import_from_app prompt, filled in with the app and the list", async () => {
+    const { prompts } = await client.listPrompts();
+    expect(prompts.map((p) => p.name)).toContain("import_from_app");
+    expect(prompts.find((p) => p.name === "import_from_app").arguments.map((a) => a.name)).toEqual(["app", "list"]);
+    const { messages } = await client.getPrompt({ name: "import_from_app", arguments: { app: "HubSpot", list: "Show on map" } });
+    const text = messages[0].content.text;
+    expect(messages[0].role).toBe("user");
+    expect(text).toMatch(/from HubSpot/);
+    expect(text).toMatch(/"Show on map": confirm that list/);
+    expect(text).toMatch(/dryRun: true[\s\S]*Only after I confirm/);
+    expect(text).toMatch(/Never read or pass contacts/);
+    const plain = (await client.getPrompt({ name: "import_from_app", arguments: {} })).messages[0].content.text;
+    expect(plain).toMatch(/Ask me which list, view or filter/);
+    await expect(client.getPrompt({ name: "no_such_prompt", arguments: {} })).rejects.toThrow(/No prompt named/);
   });
 
   it("lists every tool with its JSON Schema and MCP annotations", async () => {
@@ -63,9 +80,10 @@ describe("the MCP server", () => {
 });
 
 describe("node mcp/server.mjs", () => {
-  it("--list prints the tools", () => {
+  it("--list prints the tools and prompts", () => {
     const out = execFileSync(process.execPath, [SERVER, "--list"], { encoding: "utf8" });
     expect(out).toMatch(/^get_status\s+Map status$/m);
+    expect(out).toMatch(/^import_from_app\s+Build the map from another app \(a prompt\)$/m);
     expect(out.trim().split("\n").length).toBeGreaterThanOrEqual(14);
   });
 

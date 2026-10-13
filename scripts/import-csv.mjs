@@ -25,6 +25,10 @@
    an email address or phone number in any copied cell, an unknown
    district, service or industry, or a duplicate slug stops the import
    and names the row, before anything is written.
+
+   companiesFromRows() does the work for the CSV and for the builder's
+   import_companies tool (mcp/tools.mjs), which takes rows that an AI
+   assistant read from another app: the same fields, the same checks.
    ============================================================ */
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -68,21 +72,19 @@ export function slugify(name) {
 const clean = (s) => s.replace(/\s+/g, " ").trim();
 const list = (s) => clean(s).split(/\s*;\s*/).filter(Boolean);
 
+/** The fields a row can hold, by their names in a record (the COLUMNS a CSV header maps to). */
+export const ROW_FIELDS = [...new Set(Object.values(COLUMNS))];
+/** The fields that hold lists: separated by semicolons in a cell, or given as arrays. */
+export const LIST_FIELDS = ["tags", "founders", "services", "serves", "keywords"];
+
 /**
- * Companies from CSV text. `taxonomy` is site/taxonomy.json; `source` the source every record
- * gets. Returns { companies, warnings } or throws with every problem listed.
+ * Companies from rows of fields (ROW_FIELDS: strings; a list field as a semicolon-separated string
+ * or an array of strings). `taxonomy` is site/taxonomy.json; `source` the source every record gets.
+ * `where(i)` and `label(field)` name a row and a field in problems ("row 2", "Description").
+ * Returns the companies, or throws with every problem listed.
  */
-export function importCompanies(text, taxonomy, source) {
-  const { header, records } = recordsOf(parseCsv(text));
-  const warnings = [];
+export function companiesFromRows(rows, taxonomy, source, { where = (i) => `rows[${i}]`, label = (field) => field, blank = () => false } = {}) {
   const problems = [];
-  const columns = new Map();
-  for (const h of header) {
-    const key = COLUMNS[h.toLowerCase().replace(/[\s_-]+/g, "")];
-    if (key) columns.set(key, h);
-    else warnings.push(`column "${h}" is not one the import reads; it is ignored and not copied`);
-  }
-  for (const need of ["name", "district"]) if (!columns.has(need)) throw new Error(`import: the CSV needs a "${need}" column (it has: ${header.join(", ")})`);
   const byLabel = (vocab) => {
     const m = new Map();
     for (const v of vocab) {
@@ -97,18 +99,20 @@ export function importCompanies(text, taxonomy, source) {
   const industries = byLabel(taxonomy.industriesServed);
   const slugs = new Set();
   const companies = [];
-  records.forEach((r, i) => {
-    const row = `row ${i + 2}`;
-    const cell = (k) => (columns.has(k) ? clean(r[columns.get(k)] ?? "") : "");
-    for (const k of columns.keys()) {
-      const v = cell(k);
-      if (k === "website" || k === "linkedin") continue;
-      if (EMAIL.test(v)) problems.push(`${row}, ${columns.get(k)}: holds an email address (never imported)`);
-      if (PHONE.test(v)) problems.push(`${row}, ${columns.get(k)}: holds a phone number (never imported)`);
+  rows.forEach((r, i) => {
+    const row = where(i);
+    const has = (k) => r[k] !== undefined && r[k] !== null;
+    const cell = (k) => (!has(k) ? "" : Array.isArray(r[k]) ? r[k].map((v) => clean(String(v))).filter(Boolean).join("; ") : clean(String(r[k])));
+    const items = (k) => (!has(k) ? [] : Array.isArray(r[k]) ? r[k].map((v) => clean(String(v))).filter(Boolean) : list(String(r[k])));
+    for (const k of Object.keys(r)) {
+      if (k === "website" || k === "linkedin" || !has(k)) continue;
+      const values = LIST_FIELDS.includes(k) ? [cell(k), ...items(k)] : [cell(k)];
+      if (values.some((v) => EMAIL.test(v))) problems.push(`${row}, ${label(k)}: holds an email address (never imported)`);
+      if (values.some((v) => PHONE.test(v))) problems.push(`${row}, ${label(k)}: holds a phone number (never imported)`);
     }
     const name = cell("name");
     if (!name) {
-      if (Object.values(r).every((v) => !v.trim())) return; // a blank line at the end of a sheet
+      if (blank(i)) return; // a blank line at the end of a sheet
       problems.push(`${row}: no name`);
       return;
     }
@@ -119,12 +123,12 @@ export function importCompanies(text, taxonomy, source) {
     const district = districts.get(cell("district").toLowerCase());
     if (!district) problems.push(`${row}: district "${cell("district")}" is not in site/taxonomy.json`);
     const vocabList = (k, m, what) =>
-      list(cell(k)).map((v) => {
+      items(k).map((v) => {
         const s = m.get(v.toLowerCase());
-        if (!s) problems.push(`${row}, ${columns.get(k)}: "${v}" is not in taxonomy.json ${what}`);
+        if (!s) problems.push(`${row}, ${label(k)}: "${v}" is not in taxonomy.json ${what}`);
         return s;
       });
-    const founders = list(cell("founders")).map((f) => {
+    const founders = items("founders").map((f) => {
       const m = /^(.*?)\s*\(([^)]+)\)$/.exec(f);
       return { name: m ? m[1] : f, title: m ? m[2] : "Founder", source };
     });
@@ -137,7 +141,7 @@ export function importCompanies(text, taxonomy, source) {
       name,
       district: district ?? "",
       secondaryDistricts: [],
-      tags: list(cell("tags")),
+      tags: items("tags"),
       website: website ? (/^https?:\/\//i.test(website) ? website : `https://${website}`) : null,
       description,
       descriptionSource: description ? source : null,
@@ -148,13 +152,36 @@ export function importCompanies(text, taxonomy, source) {
       services: vocabList("services", services, "services").filter(Boolean),
       servesIndustries: vocabList("serves", industries, "industriesServed").filter(Boolean),
       businessModel: model || "Unknown",
-      keywords: list(cell("keywords")),
+      keywords: items("keywords"),
       providerPitch: null,
       connections: [],
       sources: [source],
     });
   });
   if (problems.length) throw new Error(`import: ${problems.length} problem(s), nothing written\n  ${problems.join("\n  ")}`);
+  return companies;
+}
+
+/**
+ * Companies from CSV text. `taxonomy` is site/taxonomy.json; `source` the source every record
+ * gets. Returns { companies, warnings } or throws with every problem listed.
+ */
+export function importCompanies(text, taxonomy, source) {
+  const { header, records } = recordsOf(parseCsv(text));
+  const warnings = [];
+  const columns = new Map();
+  for (const h of header) {
+    const key = COLUMNS[h.toLowerCase().replace(/[\s_-]+/g, "")];
+    if (key) columns.set(key, h);
+    else warnings.push(`column "${h}" is not one the import reads; it is ignored and not copied`);
+  }
+  for (const need of ["name", "district"]) if (!columns.has(need)) throw new Error(`import: the CSV needs a "${need}" column (it has: ${header.join(", ")})`);
+  const rows = records.map((r) => Object.fromEntries([...columns].map(([k, h]) => [k, r[h] ?? ""])));
+  const companies = companiesFromRows(rows, taxonomy, source, {
+    where: (i) => `row ${i + 2}`,
+    label: (k) => columns.get(k),
+    blank: (i) => Object.values(records[i]).every((v) => !v.trim()),
+  });
   return { companies, warnings };
 }
 
