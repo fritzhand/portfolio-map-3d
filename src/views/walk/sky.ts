@@ -12,7 +12,7 @@ import type { ScenePalette } from "./palette";
 const PANO_W = 2048;
 const PANO_H = 256;
 /** The sine of the highest elevation the panorama reaches (about 30°). */
-export const CLOUD_TOP = 0.5;
+export const CLOUD_TOP = 0.62;
 /**
  * A panorama pixel spans more of the sky across than up (360° over its width, about 30° over its
  * height): puffs are painted this much narrower than tall, so they look round in the sky.
@@ -43,9 +43,11 @@ export function cumulusField(seed = "walk-cumulus", count = 16): Cumulus[] {
     const u = (i + 0.15 + rand() * 0.7) / count;
     const low = rand() < 0.72;
     const base = low ? 0.02 + rand() * 0.1 : 0.22 + rand() * 0.3;
-    const w = low ? 0.035 + rand() * 0.045 : 0.018 + rand() * 0.025;
+    const w = low ? 0.045 + rand() * 0.055 : 0.03 + rand() * 0.035;
     const h = w * (PANO_W / PANO_H) * (low ? 0.5 + rand() * 0.25 : 0.38 + rand() * 0.18);
-    const n = low ? 9 + Math.floor(rand() * 7) : 5 + Math.floor(rand() * 4);
+    // A cloud's domes stand about 1.3 times its nominal height: keep the top inside the panorama.
+    const top = Math.min(base, 0.96 - h * 1.3);
+    const n = low ? 9 + Math.floor(rand() * 7) : 8 + Math.floor(rand() * 5);
     const puffs: Cumulus["puffs"] = [];
     for (let k = 0; k < n; k++) {
       const x = (k + 0.5) / n - 0.5 + (rand() - 0.5) * 0.08;
@@ -55,7 +57,7 @@ export function cumulusField(seed = "walk-cumulus", count = 16): Cumulus[] {
       const y = r * (0.55 + rand() * 0.35) + mid * h * PANO_H * 0.12;
       puffs.push({ x, y, r });
     }
-    out.push({ u, base, w, h, puffs });
+    out.push({ u, base: Math.max(0.02, top), w, h, puffs });
   }
   return out;
 }

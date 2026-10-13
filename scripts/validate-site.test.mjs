@@ -44,6 +44,16 @@ describe("validateSite", () => {
     expect(validateSite(copy())).toEqual({ errors: [], warnings: [] });
   });
 
+  it("takes the walk world's switches, and only the set-piece kinds it knows", () => {
+    expect(errorsAfter("site.json", (d) => (d.walk = { village: false, setPieces: ["lighthouse", "orchard"], keepsakes: false, wildlife: true, sound: false }))).toEqual([]);
+    expect(errorsAfter("site.json", (d) => (d.walk = { setPieces: false }))).toEqual([]);
+    expect(errorsAfter("site.json", (d) => (d.walk = { setPieces: ["castle"] }))).toEqual([expect.stringMatching(/^site\.json walk\.setPieces: unknown kind "castle"/)]);
+    expect(errorsAfter("site.json", (d) => (d.walk = { setPieces: ["pier", "pier"] }))).toEqual(["site.json walk.setPieces: a kind is listed twice"]);
+    expect(errorsAfter("site.json", (d) => (d.walk = { setPieces: "pier" }))).toEqual(['site.json walk.setPieces: expected true, false or a list of kinds, like ["lighthouse", "orchard"]']);
+    expect(errorsAfter("site.json", (d) => (d.walk = { sound: "off" }))).toEqual(["site.json walk.sound: expected true or false"]);
+    expect(errorsAfter("site.json", (d) => (d.walk = { weather: "rain" }))).toEqual(['site.json walk: unexpected field "weather"']);
+  });
+
   it("fails an email address in a description", () => {
     const errors = errorsAfter("data/companies.json", (d) => (company(d, "signalforge").description = "Signalforge answers at hello@signalforge.example."));
     expect(errors).toEqual(['data/companies.json.companies[5].description: looks like it holds an email address (never shipped)']);

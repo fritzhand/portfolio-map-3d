@@ -55,6 +55,20 @@ export interface ScenePalette {
   signPanel: THREE.Color;
   navy: THREE.Color;
   ink: THREE.Color;
+  /* The village (houses.ts, street.ts, scenery.ts): painted walls, roofs, glass, awnings. */
+  wallMauve: THREE.Color;
+  wallCream: THREE.Color;
+  wallStone: THREE.Color;
+  roofCoral: THREE.Color;
+  roofRose: THREE.Color;
+  roofSlate: THREE.Color;
+  solar: THREE.Color;
+  window: THREE.Color;
+  windowLight: THREE.Color;
+  shutter: THREE.Color;
+  awning: THREE.Color;
+  /** Warm accents: a banner, a parasol stripe, a balloon. */
+  flag: THREE.Color;
   /** The low afternoon sun, or the moon. */
   sun: THREE.Color;
   /** The same colors as CSS strings, for the 2D minimap. */
@@ -96,6 +110,18 @@ const TOKENS: Record<string, [string, string]> = {
   mulch: ["--scene-mulch", "#4a3a2c"],
   glass: ["--scene-glass", "#22303a"],
   signPanel: ["--scene-sign-panel", "#f7f6f2"],
+  wallMauve: ["--scene-wall-mauve", "#a08b88"],
+  wallCream: ["--scene-wall-cream", "#e8d3a2"],
+  wallStone: ["--scene-wall-stone", "#bfae9c"],
+  roofCoral: ["--scene-roof-coral", "#e27560"],
+  roofRose: ["--scene-roof-rose", "#bb5a73"],
+  roofSlate: ["--scene-roof-slate", "#5f6d99"],
+  solar: ["--scene-solar", "#3f4f86"],
+  window: ["--scene-window", "#41525a"],
+  windowLight: ["--scene-window-light", "#a9d6ea"],
+  shutter: ["--scene-shutter", "#6aa89d"],
+  awning: ["--scene-awning", "#d9604b"],
+  flag: ["--scene-flag", "#e9a23b"],
   navy: ["--brand-navy", "#2d4a65"],
   ink: ["--brand-ink", "#1d1f24"],
 };

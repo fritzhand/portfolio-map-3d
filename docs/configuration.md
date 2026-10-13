@@ -23,6 +23,7 @@ build) checks them.
 | `theme.cta`, `theme.ctaText` | The call-to-action fill (Find a provider) and its text: 4.5:1 or more against each other. |
 | `theme.ink` | Your dark ink: label text, the dark plate for white-on-transparent logos. 7:1 or more on white. |
 | `live.enabled`, `live.channel` | Live explorers in the walk world ([live-explorers.md](./live-explorers.md)). |
+| `walk` (optional) | The walk world's optional parts, each on unless set to `false`: `village` (the houses and street furniture around the plaza), `setPieces` (`true`, `false` or a list of kinds, like `["lighthouse", "orchard"]`), `keepsakes`, `wildlife`, `sound`. See [walk-world.md](./walk-world.md). |
 
 The validator checks every contrast it names and explains how to fix one that fails.
 
@@ -69,3 +70,10 @@ building, replace `src/data/hub.ts` and `src/views/walk/hub.ts` together, keepin
 (the collision, camera and minimap code reads them). The districts stand on a ring around the
 plaza, each sized by its company count; nothing in the walk world claims to show where a company
 is.
+
+Around the plaza runs a ring street with houses on its outer side (`src/views/walk/village.ts`);
+the roads to the districts cross it through gaps the houses leave open. Every district is crowned
+by a gazebo in its color. Between the districts, on the coast and in the hills, stand a lighthouse,
+a pier, a beach, a windmill, a farm, a campsite and a water tower (`scenery.ts`), one or two per
+wedge, and five keepsakes are hidden beside them (`finds.ts`; what a visitor found stays in their
+browser). All of it is decoration: no data reads it and nothing in it points at a company.

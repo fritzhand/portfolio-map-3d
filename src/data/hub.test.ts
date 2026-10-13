@@ -178,10 +178,13 @@ describe("the Nexus portal", () => {
     expect(gap - PORTAL.r).toBeGreaterThan(2);
   });
 
-  it("keeps its ring and posts off every road", () => {
+  it("keeps its ring and posts off every road's line, so a road's mouth never opens onto it", () => {
+    // A road begins at the plaza's rim, far past the portal; the lane kept clear is a walker's width
+    // either side of the road's center line carried through the plaza.
+    const lane = 2;
     for (const w of [world, bare]) {
-      expect(roadDistance(w, PORTAL.x, PORTAL.z)).toBeGreaterThan(PORTAL.r + ROAD_WIDTH / 2);
-      for (const p of portalPosts()) expect(roadDistance(w, p.x, p.z) - p.r).toBeGreaterThan(ROAD_WIDTH / 2 + 1);
+      expect(roadDistance(w, PORTAL.x, PORTAL.z)).toBeGreaterThan(PORTAL.r + lane);
+      for (const p of portalPosts()) expect(roadDistance(w, p.x, p.z) - p.r).toBeGreaterThan(lane);
     }
   });
 

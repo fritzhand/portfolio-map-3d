@@ -21,8 +21,10 @@ src/live/          live explorers: anonymous identity, presence (Supabase Realti
 src/components/    the shell: TopBar, DetailSheet, PersonDetail, Panels (finder, districts, about),
                    ListView, NexusArrival, shared bits (district icons, logo thumbnails)
 src/views/         mindmap/ (both globes: controller, globeContent, globeLayout, personLayout),
-                   walk/ (engine, world, hub, portal, pins, minimap, nav, avatar, explorers),
-                   diag/ (the /?diag graphics check)
+                   walk/ (engine, world, terrain, village, houses, street, roads, pieces and scenery
+                   (the set pieces and where they stand), wayfinding, life, finds, ambience, hub, portal,
+                   pins, minimap, nav, avatar, explorers, and kit: the shapes everything is made of),
+                   kit/ (the /?kit gallery of the walk world's models), diag/ (the /?diag graphics check)
 src/debug/         the ?debug scene probe
 federation/        the network protocol (plain TypeScript, read by the map, the Nexus and Node), and
                    agent.ts: tools for AI agents, defined once for MCP and WebMCP
@@ -63,7 +65,12 @@ file name (`import.meta.glob`), so adding one is dropping a file. `publicData()`
   tone mapping, so the colors are the theme's tokens. The walk world's sky, sea, plants and grass
   are procedural, with nothing fetched: the plants are instanced per tile with lighter far versions,
   the grass is placed in the vertex shader around the walker, and each badge sits on an ink keyline
-  that keeps it apart from bright ground and sky. Each view draws at a pixel ratio held to a pixel
+  that keeps it apart from bright ground and sky. The walk world's village (houses, street furniture,
+  lamp posts and wire, the set pieces on the coast and in the hills, the animals) is built from
+  faceted, vertex-colored parts (`src/views/walk/kit.ts`) merged into a few draw calls; no model,
+  texture or sound file is fetched, and where things stand comes from the layout alone, so it is
+  the same on every load ([walk-world.md](./walk-world.md); `/?kit` shows every model). Each view
+  draws at a pixel ratio held to a pixel
   budget and lowered while frames run slow (`src/three/adaptiveDpr.ts`).
 - **Logos measured in the browser.** `src/three/logoInfo.ts` reads a small copy of each logo once:
   opaque corners → the logo's own background; light artwork → an ink plate; otherwise white; empty
@@ -77,6 +84,7 @@ file name (`import.meta.glob`), so adding one is dropping a file. `publicData()`
 ## Extending
 
 - A district icon: add the lucide icon to `DISTRICT_ICONS` in `src/components/bits.tsx`.
+- A set piece, a house or a street prop for the walk world: [walk-world.md](./walk-world.md).
 - Your own hub building: replace `src/data/hub.ts` and `src/views/walk/hub.ts`, keeping exports.
 - A field the UI should read: add it to `types.ts`, the validator's whitelist, and check that
   `publicData()` keeps it.

@@ -65,6 +65,14 @@ Optional features follow the data: no people → no people globe, list tab or wa
   while frames run slow). Scene colors are the `--scene-*` tokens: an afternoon in the light theme,
   moonlight in the dark one.
 - Dimming never hides a badge (about 3:1 contrast kept); an active highlight always shows a chip.
+- The walk world's village, set pieces and animals are procedural (`src/views/walk/kit.ts` shapes,
+  `houses.ts`, `street.ts`, `pieces.ts`, `life.ts`): no model, texture or sound file, ever. Colors
+  come from the scene palette, never a literal. Where things stand comes from `lotsFor()`,
+  `plazaProps()`, `anchorsFor()` and `findSpots()` (pure, tested), never from `Math.random`. A set
+  piece is a `PieceModel` in `pieces.ts` registered in `PIECES` (and in `SET_PIECE_KINDS` in
+  `scripts/validate-site.mjs`); every model shows in the `/?kit` gallery (`src/views/kit/models.ts`).
+  `site.json`'s optional `walk` block turns parts off (docs/walk-world.md). The sound (`ambience.ts`)
+  is synthesized and starts only after a click.
 - Honor `prefers-reduced-motion`. No per-frame React state updates in scenes.
 - Districts are groupings, never addresses: nothing claims to show where a company is.
 

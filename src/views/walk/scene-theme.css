@@ -37,6 +37,30 @@
   --scene-mulch: #292524;
   --scene-glass: #18181b;
   --scene-sign-panel: #e4e4e7;
+
+  --scene-wall-mauve: #5f5659;
+
+  --scene-wall-cream: #7d7566;
+
+  --scene-wall-stone: #6a6460;
+
+  --scene-roof-coral: #7e4a47;
+
+  --scene-roof-rose: #6b3f50;
+
+  --scene-roof-slate: #3b4566;
+
+  --scene-solar: #283457;
+
+  --scene-window: #ffd98a;
+
+  --scene-window-light: #ffe7ac;
+
+  --scene-shutter: #3f6760;
+
+  --scene-awning: #86443b;
+
+  --scene-flag: #a8793a;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -76,5 +100,29 @@
     --scene-mulch: #292524;
     --scene-glass: #18181b;
     --scene-sign-panel: #e4e4e7;
+
+    --scene-wall-mauve: #5f5659;
+
+    --scene-wall-cream: #7d7566;
+
+    --scene-wall-stone: #6a6460;
+
+    --scene-roof-coral: #7e4a47;
+
+    --scene-roof-rose: #6b3f50;
+
+    --scene-roof-slate: #3b4566;
+
+    --scene-solar: #283457;
+
+    --scene-window: #ffd98a;
+
+    --scene-window-light: #ffe7ac;
+
+    --scene-shutter: #3f6760;
+
+    --scene-awning: #86443b;
+
+    --scene-flag: #a8793a;
   }
 }

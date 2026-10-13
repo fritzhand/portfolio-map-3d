@@ -24,7 +24,22 @@ export const RUN_MULTIPLIER = 1.9;
 export const DISTRICT_GAP = 9; // min clearance between neighboring districts
 export const CORE_RADIUS = 5.5; // district landmark clearing; no pins inside
 export const PIN_MARGIN = 3; // keep pins off the district edge
-export const ROAD_WIDTH = 3.2;
+export const ROAD_WIDTH = 6;
+
+/**
+ * The village street: a ring road around the plaza, lined with houses on its outer side. It is
+ * scenery you can walk on (no gate, no collider), crossed by every road to a district. The houses
+ * stand between VILLAGE.houseInner and VILLAGE.outer, clear of the districts, which begin at
+ * PLAZA_RADIUS + 26 at the nearest.
+ */
+export const VILLAGE = {
+  /** Center line of the ring street. */
+  streetR: 57.5,
+  streetWidth: 6.4,
+  /** Where the houses' front yards begin, and the edge of the village (nothing is scattered inside it). */
+  houseInner: 64.6,
+  outer: 73,
+} as const;
 
 /** The people area's slug. Not a district: people belong to no industry. The validator keeps it off the district list. */
 export const PEOPLE_AREA = "people";
@@ -155,9 +170,10 @@ export function clampToIsland(layout: WorldLayout, x: number, z: number, margin 
   return { x: (x / d) * max, z: (z / d) * max };
 }
 
-/** Is (x, z) on the road from the plaza to any district? */
+/** Is (x, z) on the road from the plaza to any district, or on the village's ring street? */
 export function onRoad(layout: WorldLayout, x: number, z: number, pad = 0): boolean {
   const d = Math.hypot(x, z);
+  if (Math.abs(d - VILLAGE.streetR) <= VILLAGE.streetWidth / 2 + pad) return true;
   for (const disc of layout.discs) {
     const ux = Math.cos(disc.angle);
     const uz = Math.sin(disc.angle);
@@ -167,6 +183,17 @@ export function onRoad(layout: WorldLayout, x: number, z: number, pad = 0): bool
     if (across <= ROAD_WIDTH / 2 + pad && d >= PLAZA_RADIUS - 2) return true;
   }
   return false;
+}
+
+/** The middle of each wedge between neighboring districts (angles, radians): where the walk world's set pieces stand. */
+export function wedgeAngles(layout: WorldLayout): number[] {
+  const a = layout.discs.map((d) => d.angle).sort((x, y) => x - y);
+  if (a.length === 0) return [];
+  if (a.length === 1) return [a[0] + Math.PI];
+  return a.map((v, i) => {
+    const next = i + 1 < a.length ? a[i + 1] : a[0] + Math.PI * 2;
+    return (v + next) / 2;
+  });
 }
 
 /** Deterministic scatter points for trees/rocks: on land, off roads, out of districts and the plaza. */
@@ -179,7 +206,7 @@ export function decorPoints(layout: WorldLayout, count: number, seed = 1): { x: 
     const r = Math.sqrt(rand()) * (layout.islandRadius - 10);
     const x = Math.cos(a) * r;
     const z = Math.sin(a) * r;
-    if (Math.hypot(x, z) < PLAZA_RADIUS + 6) continue;
+    if (Math.hypot(x, z) < VILLAGE.outer) continue;
     if (layout.discs.some((d) => Math.hypot(x - d.x, z - d.z) < d.r + 2.5)) continue;
     if (onRoad(layout, x, z, 2.2)) continue;
     if (out.some((p) => (p.x - x) ** 2 + (p.z - z) ** 2 < 9)) continue;

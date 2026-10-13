@@ -33,7 +33,7 @@ Node 22.18 or later, and `npm install` in the repository. Then point your MCP cl
 | `get_taxonomy` | The districts and the vocabularies records use: services, industries served, connection kinds, business models, district icons. |
 | `list_companies`, `get_company` | The companies, briefly or one in full with its sources. |
 | `create_site` | Replaces the fictional example with a blank map for an organization (`npm run new-site`). |
-| `update_site` | Changes `site/site.json`: names, addresses, labels, theme colors. |
+| `update_site` | Changes `site/site.json`: names, addresses, labels, theme colors, and the walk world's optional parts. |
 | `set_districts` | Replaces the districts in `site/taxonomy.json`. |
 | `upsert_company` | Adds a company, or updates one by slug. |
 | `remove_company` | Removes a company, its logo and the connections to it. |

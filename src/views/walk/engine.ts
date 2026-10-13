@@ -12,7 +12,7 @@
 import * as THREE from "three";
 import { PEOPLE, DISTRICTS, COMPANIES } from "../../data/catalog";
 import { PORTAL, hubRoofAt, segmentHitsHub } from "../../data/hub";
-import { PEOPLE_AREA, RUN_MULTIPLIER, WALK_SPEED, districtAt, hashString, layoutWorld, type AreaSlug, type WorldLayout } from "../../data/layout";
+import { PEOPLE_AREA, PLAZA_RADIUS, RUN_MULTIPLIER, WALK_SPEED, districtAt, hashString, layoutWorld, onRoad, type AreaSlug, type WorldLayout } from "../../data/layout";
 import type { AvatarSpec } from "../../live/identity";
 import type { LiveSession, LiveState } from "../../live/presence";
 import type { FlyRequest } from "../../state/store";
@@ -20,7 +20,9 @@ import { useStore } from "../../state/store";
 import { toonify } from "../../three/toon";
 import { buildCar, CAR_SPEED, CAR_SPRINT_SPEED, CAR_COLLISION_RADIUS, canEnterCar, findCarSpawn, findCarExit } from "./car";
 import { LEAP_DURATION, LEAP_SPEED, LEAP_RUN_SPEED, leapHeight } from "./leap";
+import { Ambience } from "./ambience";
 import { buildAvatar, type Avatar } from "./avatar";
+import type { FindKind, FindProgress } from "./finds";
 import { Explorers, type ExplorerDot } from "./explorers";
 import { Minimap } from "./minimap";
 import { AVATAR_RADIUS, ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, cameraRelative, clearPitch, districtEntrance, lookLift, pitchFor, resolveCollisions, standNear, type Circle } from "./nav";
@@ -69,6 +71,8 @@ export interface EngineHooks {
   onPausedNudge(): void;
   onTravelMessage?(message: string | null): void;
   onCar?(action: "summon" | "enter" | "exit"): void;
+  /** The walker picked up a keepsake (finds.ts); the progress says what has been found so far. */
+  onFind?(kind: FindKind, progress: FindProgress): void;
 }
 
 export interface Overlay {
@@ -147,6 +151,8 @@ export class WalkEngine {
   private leap: { elapsed: number; x: number; z: number; speed: number } | null = null;
   private lift = 0;
   readonly car = buildCar();
+  /** The world's sound (ambience.ts): off until the visitor turns it on. */
+  readonly ambience = new Ambience();
   private driving = false;
   private carAction: "summon" | "enter" | "exit" = "summon";
   private carMoving = 0;
@@ -160,6 +166,8 @@ export class WalkEngine {
   // Camera rig.
   yaw: number;
   private yawTarget: number;
+  /** When the visitor last turned the view by hand (the follow camera leaves it alone for a moment). */
+  private lookedAt = -10;
   private dist = ZOOM_DEFAULT;
   private distTarget = ZOOM_DEFAULT;
   private pitchOff = 0;
@@ -217,6 +225,8 @@ export class WalkEngine {
   private padEpoch = 0;
   /** Screen rects (x, y, w, h in view pixels) that projected labels keep clear of, e.g. the district banner. */
   private reserved: number[] = [];
+  /** The HUD's controls and cards (x, y, w, h in view pixels): names never cover them; area labels slide out from under them. */
+  private hud: number[] = [];
   /** Screen rect of the hub's rooftop sign this frame (x, y, w, h), or w < 0 when it is off screen. */
   private beaconRect = [0, 0, -1, 0];
   /** Screen rect of the sign's pole, from the sign down to the roof. */
@@ -258,6 +268,17 @@ export class WalkEngine {
     this.z = spawn.z;
     this.heading = spawn.facing;
     this.yaw = this.yawTarget = spawn.facing + Math.PI;
+    if (import.meta.env.DEV) {
+      // Development only: ?at=x,z[,heading[,distance]] starts the walker somewhere, to look at a corner of the world.
+      const at = new URLSearchParams(location.search).get("at")?.split(",").map(Number);
+      if (at && at.length >= 2 && at.every(Number.isFinite)) {
+        this.x = at[0];
+        this.z = at[1];
+        if (at.length > 2) this.heading = at[2];
+        this.yaw = this.yawTarget = this.heading + Math.PI;
+        if (at.length > 3) this.dist = this.distTarget = at[3];
+      }
+    }
     this.stopPaletteWatch = watchScenePalette((palette) => this.setPalette(palette));
   }
 
@@ -319,7 +340,7 @@ export class WalkEngine {
     this.height = Math.max(1, h);
     // Portrait screens get a taller field of view so the world isn't seen through a keyhole.
     const aspect = this.width / this.height;
-    const fov = aspect >= 1 ? 50 : Math.min(66, 50 + (1 - aspect) * 30);
+    const fov = aspect >= 1 ? 46 : Math.min(64, 46 + (1 - aspect) * 30);
     if (this.camera && Math.abs(this.camera.fov - fov) > 0.1) {
       this.camera.fov = fov;
       this.camera.updateProjectionMatrix();
@@ -345,6 +366,7 @@ export class WalkEngine {
 
   dispose(): void {
     this.disposed = true;
+    this.ambience.dispose();
     this.stopPaletteWatch();
     window.clearTimeout(this.fadeTimer);
     if (this.scene) this.scene.remove(this.world.root, this.pins.root, this.avatar.root, this.explorers.root, this.car.root);
@@ -451,6 +473,11 @@ export class WalkEngine {
   /** The HUD around the D-pad moved (e.g. the minimap opened): check again whether the pad fits. */
   hudChanged(): void {
     this.padEpoch++;
+  }
+
+  /** The HUD's controls and cards, measured by the view when its layout changes (never per frame). */
+  setHud(rects: readonly { x: number; y: number; w: number; h: number }[]): void {
+    this.hud = rects.flatMap((r) => [r.x, r.y, r.w, r.h]);
   }
 
   /** Keep projected labels out of a HUD element's area (or release it with null). */
@@ -594,6 +621,7 @@ export class WalkEngine {
           if (prev && now) {
             if (prev.dist > 0 && now.dist > 0) this.zoomBy(prev.dist / now.dist);
             this.yawTarget -= (now.mx - prev.mx) * 0.0065;
+            this.lookedAt = this.time;
             this.pitchOff = clamp(this.pitchOff + (now.my - prev.my) * 0.0035, -0.22, 0.38);
             if (this.reduced) this.yaw = this.yawTarget;
           }
@@ -639,6 +667,7 @@ export class WalkEngine {
       }
       if (!d.moved) return;
       this.yawTarget -= dx * 0.0065;
+      this.lookedAt = this.time;
       this.pitchOff = clamp(this.pitchOff + dy * 0.0035, -0.22, 0.38);
       if (this.reduced) this.yaw = this.yawTarget;
     };
@@ -797,7 +826,10 @@ export class WalkEngine {
       this.hooks.onPortal(portal);
     }
     this.updateCamera(dt, false);
-    this.world.update(this.time, dt, this.reduced, this.yaw, this.camera.position);
+    this.world.update(this.time, dt, this.reduced, this.yaw, this.camera.position, this);
+    const find = this.world.finds.update(this.time, dt, this.reduced, { x: this.x, z: this.z, y: this.groundAt(this.x, this.z) + this.lift });
+    if (find) this.hooks.onFind?.(find, this.world.finds.progress());
+    this.updateSound(dt);
     this.pins.update(now / 1000, dt, this.time, this.reduced, this.camera, this.camera.position.distanceTo(this.camTarget));
     this.avatar.animate(dt, this.time, this.leap ? 0 : this.speed01, this.reduced);
     this.car.animate(dt, this.carMoving);
@@ -816,6 +848,27 @@ export class WalkEngine {
       this.miniTimer = 0;
       this.drawMinimap();
     }
+  }
+
+  /** Turn the world's sound on or off (from a click or key press: a browser's rule). */
+  setSound(on: boolean): void {
+    this.ambience.setNight(this.palette.dark);
+    this.ambience.setEnabled(on);
+  }
+
+  /** Nudge the sound to where the walker is: footsteps by the ground, the sea by the coast. */
+  private updateSound(dt: number): void {
+    if (!this.ambience.playing) return;
+    const r = Math.hypot(this.x, this.z);
+    const edge = this.terrain.waterlineAt(Math.atan2(this.z, this.x)) - r;
+    const shore = clamp(1 - edge / 42, 0, 1);
+    this.ambience.update(dt, {
+      stepping: this.speed01 > 0.2 && !this.leap && !this.driving,
+      running: this.running,
+      road: r < PLAZA_RADIUS + 0.5 || onRoad(this.layout, this.x, this.z, 0),
+      shore,
+      wind: clamp(0.3 + shore * 0.5 + this.groundAt(this.x, this.z) * 0.08, 0, 1),
+    });
   }
 
   /** Share this explorer's pose, every frame (the session throttles, deduplicates and stays quiet while hidden). */
@@ -839,9 +892,15 @@ export class WalkEngine {
     const rot = keysOn ? (this.rotate.q ? 1 : 0) - (this.rotate.e ? 1 : 0) : 0;
     if (rot) {
       this.yawTarget += rot * 1.9 * dt;
+      this.lookedAt = this.time;
       if (this.reduced) this.yaw = this.yawTarget;
     }
     const mag = Math.min(1, Math.hypot(f, r));
+    // A follow camera: after a turn, the view eases back behind the walker (never while the visitor
+    // is looking around, strafing or standing still, and not at all under reduced motion).
+    if (!this.reduced && !this.leap && f > 0.25 && Math.abs(r) < f && this.time - this.lookedAt > 1.4) {
+      this.yawTarget = lerpAngle(this.yawTarget, this.heading + Math.PI, damp(0.5, dt));
+    }
     this.running = this.shift;
     const motionDt = this.leap ? Math.min(dt, LEAP_DURATION - this.leap.elapsed) : dt;
     if (this.leap) {
@@ -1082,6 +1141,32 @@ export class WalkEngine {
     return sz;
   }
 
+  /**
+   * A label's place, slid out from under the HUD: as it is when it covers no HUD control, otherwise
+   * the nearest place beside or below the control it covers that is in view and clear of every
+   * control (null when there is none).
+   */
+  private clearOfHud(x: number, y: number, w: number, h: number, pad = 6): { x: number; y: number } | null {
+    const hud = this.hud;
+    const hits = (cx: number, cy: number) => {
+      for (let k = 0; k < hud.length; k += 4) {
+        if (cx < hud[k] + hud[k + 2] + pad && cx + w + pad > hud[k] && cy < hud[k + 1] + hud[k + 3] + pad && cy + h + pad > hud[k + 1]) return k;
+      }
+      return -1;
+    };
+    const k = hits(x, y);
+    if (k < 0) return { x, y };
+    const inView = (cx: number, cy: number) => cx >= 4 && cy >= 4 && cx + w <= this.width - 4 && cy + h <= this.height - 4;
+    const tries = [
+      { x: hud[k] - pad - w, y },
+      { x: hud[k] + hud[k + 2] + pad, y },
+      { x, y: hud[k + 1] + hud[k + 3] + pad },
+      { x, y: hud[k + 1] - pad - h },
+    ].sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y));
+    for (const t of tries) if (inView(t.x, t.y) && hits(t.x, t.y) < 0) return t;
+    return null;
+  }
+
   /** Greedy declutter: claim a screen rect unless it overlaps one already claimed. */
   private claim(x: number, y: number, w: number, h: number, pad = 4): boolean {
     const r = this.rects;
@@ -1098,6 +1183,7 @@ export class WalkEngine {
     const focused = document.activeElement;
     this.rects.length = 0;
     for (const v of this.reserved) this.rects.push(v);
+    for (const v of this.hud) this.rects.push(v);
     this.reservePortalLabelSpace();
 
     // Companies and people first (nearest first): name buttons for the closest pins.
@@ -1170,10 +1256,17 @@ export class WalkEngine {
         const s = clamp(1.12 - d / 330, 0.62, 1);
         const sz = this.sizeOf(el);
         if (sz && el !== focused) {
-          const lx = p.sx - (sz.w * s) / 2;
           const lw = sz.w * s;
           const lh = sz.h * s;
-          if (beaconSeen && !behind) {
+          // Out from under the HUD's controls first: beside them, or below.
+          const clear = this.clearOfHud(p.sx - lw / 2, sy - lh, lw, lh);
+          if (clear) {
+            sx = clear.x + lw / 2;
+            sy = clear.y + lh;
+          }
+          const lx = sx - lw / 2;
+          if (!clear) show = false;
+          else if (beaconSeen && !behind) {
             if (this.beaconCover(lx, sy - lh, lw, lh) > 0.3 || !this.claim(lx, sy - lh, lw, lh, 6)) show = false;
           } else if (beaconSeen && this.hitsBeacon(lx, sy - lh, lw, lh)) {
             const b = this.beaconRect;

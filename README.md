@@ -7,12 +7,14 @@ with three ways in:
 | View | What it's for |
 |---|---|
 | **Globe** | A slowly turning globe of logos. Each district (a sector, a track, a program) owns a region of the sphere; arcs show documented connections. Select a logo to see the company, its connections and its potential fits among the others. An optional second globe shows the organization's people (coaches, mentors, advisors). |
-| **Walk** | Your own explorer on an island: the organization's hub on a central plaza, a neighborhood per district, a drop pin and badge for every company. Walk up to one and its details slide up. Other visitors can walk there with you, live. A portal on the plaza leads to the Nexus. |
+| **Walk** | Your own explorer, a kid in shorts and a straw hat, on a painted island on a warm afternoon (or by moonlight): the organization's hub on a central plaza, a village street of houses with lamp posts and bunting around it, a gazebo-crowned neighborhood per district, a drop pin and badge for every company, signposts with walking times, and a coast and hills with a lighthouse, a pier, beach huts, a windmill, an orchard, an observatory and more to wander to, with keepsakes hidden among them. Walk up to a pin and its details slide up. Other visitors can walk there with you, live. A portal on the plaza leads to the Nexus. Every model is code, not a file: see them all at `/?kit`. |
 | **List** | The same records as a searchable, filterable directory. No 3D required; every record is reachable here. |
 
 In Walk, use WASD or the arrow keys to move, Shift to run, and Space for a long jump.
 Press F or use the car button to summon a vehicle, get in, or get out. Touch controls provide
-the same travel actions. The renderer follows the map's light or dark theme.
+the same travel actions. The renderer follows the map's light or dark theme. Five keepsakes are hidden
+around the island (the counter by the sound button); the sound (breeze, cicadas, the sea, footsteps)
+is made in the browser and stays off until you turn it on.
 
 Plus a **provider finder** ("is there a company here that can do this for me?"), search, deep
 links for everything, and a strict, provenance-first data contract.
@@ -90,6 +92,7 @@ pull framework updates (`git pull upstream main`) without conflicts.
 | [docs/importing.md](./docs/importing.md) | Companies from a spreadsheet |
 | [docs/network.md](./docs/network.md) | The manifest, the registry, the Nexus, joining |
 | [docs/deploying.md](./docs/deploying.md) | Vercel, Netlify, GitHub Pages, any static host |
+| [docs/walk-world.md](./docs/walk-world.md) | The walk world: what you can switch off, how it is laid out, adding your own set pieces |
 | [docs/live-explorers.md](./docs/live-explorers.md) | Multiplayer in the walk world (optional, Supabase Realtime) |
 | [docs/mcp.md](./docs/mcp.md) | Build a map with an AI assistant (MCP), and the sites' tools for agents (WebMCP) |
 | [docs/architecture.md](./docs/architecture.md) | How the code is laid out, and why |

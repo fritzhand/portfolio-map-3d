@@ -61,9 +61,33 @@ export interface SiteConfig {
     /** The Realtime channel's base name; production joins "<channel>-v1", every other build "<channel>-preview". */
     channel: string;
   };
+  /** The walk world's optional parts (docs/walk-world.md). Each is on unless set to false. */
+  walk?: {
+    /** The houses, street lamps and bunting around the plaza, with the plaza's fountain, stalls and props. */
+    village?: boolean;
+    /** The set pieces on the coast and the hills: every kind (true), none (false) or the kinds listed (src/views/walk/pieces.ts). */
+    setPieces?: boolean | string[];
+    /** Keepsakes hidden by the set pieces for visitors to find, and their counter. */
+    keepsakes?: boolean;
+    /** Gulls, butterflies, motes of light, a hot-air balloon and a cat. */
+    wildlife?: boolean;
+    /** The sound button: the world's synthesized sound, off until a visitor turns it on. */
+    sound?: boolean;
+  };
 }
 
 export const SITE = siteFile as SiteConfig;
+
+const setPieces = SITE.walk?.setPieces;
+
+/** The walk world's optional parts, each on unless site.json turns it off. `setPieces` is null for every kind, or the kinds to use. */
+export const WALK: { village: boolean; setPieces: readonly string[] | null; keepsakes: boolean; wildlife: boolean; sound: boolean } = {
+  village: SITE.walk?.village !== false,
+  setPieces: setPieces === false ? [] : Array.isArray(setPieces) ? setPieces : null,
+  keepsakes: SITE.walk?.keepsakes !== false,
+  wildlife: SITE.walk?.wildlife !== false,
+  sound: SITE.walk?.sound !== false,
+};
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 

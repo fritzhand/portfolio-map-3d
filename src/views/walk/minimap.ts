@@ -4,7 +4,8 @@
    is drawn once; the live layer (your arrow and view wedge, other explorers
    as dots in their outfit color) is redrawn a few times a second. */
 import { hubBeacon, hubFootprints } from "../../data/hub";
-import { PLAZA_RADIUS, ROAD_WIDTH, type WorldLayout } from "../../data/layout";
+import { PLAZA_RADIUS, ROAD_WIDTH, VILLAGE, type WorldLayout } from "../../data/layout";
+import { HOUSE_LOT, lotsFor } from "./village";
 import { cpuCanvas, cpuContext } from "../../three/cpuCanvas";
 import type { ScenePalette } from "./palette";
 import type { Terrain } from "./terrain";
@@ -106,6 +107,25 @@ export class Minimap {
       c.moveTo(x0, y0);
       c.lineTo(x1, y1);
       c.stroke();
+    }
+    // The village's ring street, and its houses along the outside.
+    {
+      const [cx, cy] = this.toMap(0, 0);
+      c.beginPath();
+      c.arc(cx, cy, VILLAGE.streetR * s, 0, Math.PI * 2);
+      c.lineWidth = Math.max(1.4, VILLAGE.streetWidth * s);
+      c.strokeStyle = css.road;
+      c.stroke();
+      c.fillStyle = css.wallCream;
+      for (const lot of lotsFor(layout).lots) {
+        const [hx, hy] = this.toMap(lot.x, lot.z);
+        const w = Math.max(1.6, HOUSE_LOT[lot.kind].w * s * 0.8);
+        c.save();
+        c.translate(hx, hy);
+        c.rotate(-lot.rot);
+        c.fillRect(-w / 2, -w * 0.3, w, w * 0.6);
+        c.restore();
+      }
     }
     // Districts.
     const byslug = new Map(districts.map((d) => [d.slug, d]));
