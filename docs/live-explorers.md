@@ -1,5 +1,8 @@
 # Live explorers (optional)
 
+Live explorers run in the classic walk world (`"walk": { "world": "classic" }` in `site/site.json`,
+[configuration.md](./configuration.md#the-walk-world)); the campus does not have them yet.
+
 With live explorers on, everyone walking your map's world at the same time sees everyone else:
 a generated name ("Curious Manatee 42") and avatar over each explorer, moving in real time, with a
 dot on the minimap. It runs on **Supabase Realtime** (presence and broadcast on one public channel;

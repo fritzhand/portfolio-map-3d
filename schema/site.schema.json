@@ -219,36 +219,26 @@
         }
       }
     },
-    "live": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "enabled",
-        "channel"
-      ],
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "description": "Live explorers in the walk world (needs a Supabase project: docs/live-explorers.md)."
-        },
-        "channel": {
-          "type": "string",
-          "pattern": "^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){1,47}$",
-          "description": "The Realtime channel's base name; production joins <channel>-v1, other builds <channel>-preview."
-        }
-      }
-    },
     "walk": {
       "type": "object",
       "additionalProperties": false,
-      "description": "The walk world's optional parts; each is on unless set to false (docs/walk-world.md).",
+      "description": "The walk world: which one (world; the default is campus), and the classic world's optional parts, each on unless set to false (docs/walk-world.md).",
       "properties": {
+        "world": {
+          "type": "string",
+          "enum": [
+            "campus",
+            "classic"
+          ],
+          "default": "campus",
+          "description": "The walk world: \"campus\", the tech campus built in Blender from code (art/), or \"classic\", the village built in TypeScript, with live explorers. Optional; the default is campus. docs/configuration.md#the-walk-world compares them."
+        },
         "village": {
           "type": "boolean",
-          "description": "The houses, street lamps and bunting around the plaza, with the plaza's fountain, market stalls, ice-cream cart, kiosk and bike rack."
+          "description": "The classic world: the houses, street lamps and bunting around the plaza, with the plaza's fountain, market stalls, ice-cream cart, kiosk and bike rack."
         },
         "setPieces": {
-          "description": "The set pieces on the coast and the hills between the districts: true for every kind, false for none, or a list of the kinds to use (src/views/walk/pieces.ts).",
+          "description": "The classic world: the set pieces on the coast and the hills between the districts: true for every kind, false for none, or a list of the kinds to use (src/views/walk/pieces.ts).",
           "oneOf": [
             {
               "type": "boolean"
@@ -277,15 +267,34 @@
         },
         "keepsakes": {
           "type": "boolean",
-          "description": "Keepsakes hidden by the set pieces for visitors to find, and their counter."
+          "description": "The classic world: keepsakes hidden by the set pieces for visitors to find, and their counter."
         },
         "wildlife": {
           "type": "boolean",
-          "description": "Gulls, butterflies, motes of light, a hot-air balloon and a cat."
+          "description": "The classic world: gulls, butterflies, motes of light, a hot-air balloon and a cat."
         },
         "sound": {
           "type": "boolean",
-          "description": "The sound button: the world's synthesized sound, off until a visitor turns it on."
+          "description": "The classic world: the sound button: the world's synthesized sound, off until a visitor turns it on."
+        }
+      }
+    },
+    "live": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "channel"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Live explorers in the walk world (the classic world only; needs a Supabase project: docs/live-explorers.md)."
+        },
+        "channel": {
+          "type": "string",
+          "pattern": "^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9])){1,47}$",
+          "description": "The Realtime channel's base name; production joins <channel>-v1, other builds <channel>-preview."
         }
       }
     }

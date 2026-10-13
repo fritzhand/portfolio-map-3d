@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NEXUS_URL, PROTOCOL, type Manifest, type NetworkInstance } from "../../../federation/protocol.ts";
-import { SnapshotError, buildNetwork, safeLogoPath, statusText } from "./network.ts";
+import { SnapshotError, buildNetwork, safeLogoPath, servedFrom, statusText } from "./network.ts";
 
 function manifest(id: string, n: number, over: Partial<Manifest> = {}): Manifest {
   return {
@@ -147,5 +147,33 @@ describe("statusText", () => {
   it("says each status in plain words", () => {
     expect(statusText("unreachable")).toBe("Not reachable at last check");
     expect(statusText("no-backlink")).toMatch(/does not link to the Nexus/);
+  });
+});
+
+describe("servedFrom", () => {
+  const onNexus = (id: string, status: NetworkInstance["status"]) => {
+    const url = `${NEXUS_URL}/${id}`;
+    return instance(id, status, status === "verified" ? manifest(id, 2, { url, publisher: { name: id, website: null } }) : null, { entry: { id, name: id, url, joined: "2026-09-01", maintainer: "fritzhand" } });
+  };
+  const model = buildNetwork(snap([onNexus("example", "verified"), instance("alpha", "verified", manifest("alpha", 3)), onNexus("gone", "invalid")]));
+  const preview = "https://portfolio-map-3d-abc123.vercel.app/?world";
+
+  it("links the maps published on the Nexus's own site on the deployment it is served from, and no others", () => {
+    const m = servedFrom(model, preview);
+    expect(m.byId.get("example")!.url).toBe("https://portfolio-map-3d-abc123.vercel.app/example");
+    expect(m.byId.get("alpha")!.url).toBe("https://alpha.example.org");
+    expect(m.listed.find((l) => l.id === "gone")!.url).toBe("https://portfolio-map-3d-abc123.vercel.app/gone");
+    // One world object per world: the list, the index and the worlds agree.
+    for (const l of m.listed) if (l.world) expect(m.byId.get(l.id)).toBe(l.world);
+    expect(m.worlds.map((w) => w.id)).toEqual(model.worlds.map((w) => w.id));
+    // The manifest is the map's own, untouched.
+    expect(m.byId.get("example")!.manifest.url).toBe(`${NEXUS_URL}/example`);
+  });
+
+  it("changes nothing seen from the Nexus's own site, and leaves the model it was given alone", () => {
+    const m = servedFrom(model, `${NEXUS_URL}/?world`);
+    expect(m.worlds.map((w) => w.url)).toEqual(model.worlds.map((w) => w.url));
+    servedFrom(model, preview);
+    expect(model.byId.get("example")!.url).toBe(`${NEXUS_URL}/example`);
   });
 });

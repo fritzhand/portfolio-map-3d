@@ -93,6 +93,10 @@ export function urlSearch(s: Shareable, current: string): string {
   if (cur.has("debug")) p.set("debug", "");
   // ?at=x,z[,heading[,distance]] starts the walk world's walker somewhere (development builds only; src/views/walk/engine.ts).
   if (import.meta.env.DEV && cur.has("at")) p.set("at", cur.get("at") ?? "");
+  // ?world=classic|campus overrides the site's walk world (development only; src/views/walk/WalkView.tsx).
+  if (import.meta.env.DEV && cur.has("world")) p.set("world", cur.get("world") ?? "");
+  // ?synthetic=13x540 builds the island from generated stand-ins (development only; src/island/catalogFor.ts).
+  if (import.meta.env.DEV && cur.has("synthetic")) p.set("synthetic", cur.get("synthetic") ?? "");
   return p.toString();
 }
 

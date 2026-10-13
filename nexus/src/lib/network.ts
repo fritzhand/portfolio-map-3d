@@ -13,7 +13,7 @@
      world. It appears in the network list with its problem in plain words.
 
    Pure functions, unit-tested. */
-import { PROTOCOL, type InstanceStatus, type Manifest, type OwnerProof, type RegistryEntry } from "../../../federation/protocol.ts";
+import { PROTOCOL, onThisDeployment, type InstanceStatus, type Manifest, type OwnerProof, type RegistryEntry } from "../../../federation/protocol.ts";
 import { validateRegistryEntry, verifyInstance } from "../../../federation/validate.ts";
 import { layoutWorlds, type Placement } from "./layout.ts";
 
@@ -162,6 +162,27 @@ export function buildNetwork(snapshot: unknown): NetworkModel {
     byId: new Map(worlds.map((w) => [w.id, w])),
     listed,
     companies: worlds.reduce((n, w) => n + w.manifest.counts.companies, 0),
+  };
+}
+
+/**
+ * The network as seen from the deployment at `here`: a map published on the Nexus's own site (the
+ * example map) is linked on this deployment, so a preview of the Nexus opens the preview's own copy
+ * of it rather than the live one. Seen from the Nexus's own site, nothing changes.
+ */
+export function servedFrom(model: NetworkModel, here: string): NetworkModel {
+  const moved = new Map<World, World>();
+  const world = (w: World) => {
+    let m = moved.get(w);
+    if (!m) moved.set(w, (m = { ...w, url: onThisDeployment(w.url, here) }));
+    return m;
+  };
+  const worlds = model.worlds.map(world);
+  return {
+    ...model,
+    worlds,
+    byId: new Map(worlds.map((w) => [w.id, w])),
+    listed: model.listed.map((l) => ({ ...l, url: onThisDeployment(l.url, here), world: l.world ? world(l.world) : null })),
   };
 }
 

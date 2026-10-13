@@ -66,7 +66,7 @@ export function hatParts(hat: Hat, accent: THREE.Color, body: THREE.Color): Part
       ];
     }
     case "straw": {
-      // A wide, gently sagging brim, a rounded crown and a ribbon: a summer hat.
+      // A wide, gently sagging brim, a rounded crown and a ribbon: a sun hat.
       const brim = new THREE.CylinderGeometry(0.5, 0.46, 0.03, 22, 1);
       const bp = brim.attributes.position;
       for (let i = 0; i < bp.count; i++) {
@@ -145,7 +145,7 @@ export function buildAvatar(spec: AvatarSpec): Avatar {
   const skin = c(spec.skin);
   const shirtDark = mixc(body, INK, 0.25);
   const hair = HAIR[specHash(spec, 1) % HAIR.length].clone();
-  // Summer shorts, and bare feet.
+  // Shorts, and bare feet.
   let pants = TROUSERS[specHash(spec, 2) % TROUSERS.length].clone();
   if (Math.abs(luma(pants) - luma(body)) < 0.1) pants = mixc(pants, luma(body) > 0.5 ? INK : WHITE, 0.4);
   const shoes = mixc(skin, new THREE.Color("#7a4a30"), 0.18);

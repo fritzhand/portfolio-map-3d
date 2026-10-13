@@ -282,6 +282,19 @@ export function instanceHref(url: string, company?: string | null): string {
   return u.toString();
 }
 
+/**
+ * An address on the Nexus's own site (the Nexus, or a map published with it, like the example map),
+ * as seen from a deployment of that site somewhere else (a preview, or a local build): the same path
+ * on `here`, so the deployment links to itself rather than to the live site. Any other address, and
+ * every address seen from the Nexus's own site, comes back as it is.
+ */
+export function onThisDeployment(url: string, here: string): string {
+  const u = new URL(url);
+  const h = new URL(here);
+  if (!ACCEPTED_NEXUS_URLS.includes(u.origin) || ACCEPTED_NEXUS_URLS.includes(h.origin)) return url;
+  return `${h.origin}${u.pathname}${u.search}${u.hash}`;
+}
+
 /** Did the visitor arrive from the Nexus? (`?from=nexus` on an instance's URL.) */
 export function cameFromNexus(search: string): boolean {
   return new URLSearchParams(search).get("from") === "nexus";

@@ -1,0 +1,15 @@
+{
+  "_about": "The landmark a district gets at its heart in the walk world. A site sets one per district as \"theme\" in site/taxonomy.json; a district without one gets the theme its icon suggests, or the next one its neighbors are not using. The people area always gets \"people\". Read by src/island/mapLayout.ts and scripts/validate-site.mjs.",
+  "themes": ["greenhouse", "garden", "workshop", "lab", "market", "bank", "harbor", "studio", "school"],
+  "byIcon": {
+    "leaf": "greenhouse", "droplets": "greenhouse", "mountain": "greenhouse", "cloud": "greenhouse",
+    "heart-pulse": "garden", "heart-handshake": "garden", "baby": "garden", "dumbbell": "garden", "paw-print": "garden", "house": "garden",
+    "cpu": "workshop", "bot": "workshop", "factory": "workshop", "hammer": "workshop", "car": "workshop", "rocket": "workshop",
+    "flask-conical": "lab", "microscope": "lab", "dna": "lab", "brain": "lab", "orbit": "lab", "radar": "lab", "satellite": "lab", "sparkles": "lab", "code": "lab", "network": "lab", "layers": "lab", "lock": "lab",
+    "shopping-bag": "market", "coffee": "market", "gem": "market",
+    "landmark": "bank", "banknote": "bank", "briefcase": "bank", "building-2": "bank",
+    "anchor": "harbor", "plane": "harbor", "package": "harbor", "globe": "harbor",
+    "film": "studio", "camera": "studio", "music": "studio", "gamepad-2": "studio", "megaphone": "studio", "palette": "studio",
+    "graduation-cap": "school", "book-open": "school"
+  }
+}

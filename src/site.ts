@@ -56,13 +56,15 @@ export interface SiteConfig {
     ink: string;
   };
   live: {
-    /** Live explorers in the walk world (Supabase Realtime). Off unless the site turns it on. */
+    /** Live explorers in the walk world (Supabase Realtime; the classic world only). Off unless the site turns it on. */
     enabled: boolean;
     /** The Realtime channel's base name; production joins "<channel>-v1", every other build "<channel>-preview". */
     channel: string;
   };
-  /** The walk world's optional parts (docs/walk-world.md). Each is on unless set to false. */
+  /** The walk world: which one (optional; the default is the campus) and the classic world's optional parts (docs/walk-world.md), each on unless set to false. */
   walk?: {
+    /** "campus": the Blender-built tech campus. "classic": the code-built village, with live explorers. */
+    world?: WalkWorldName;
     /** The houses, street lamps and bunting around the plaza, with the plaza's fountain, stalls and props. */
     village?: boolean;
     /** The set pieces on the coast and the hills: every kind (true), none (false) or the kinds listed (src/views/walk/pieces.ts). */
@@ -76,11 +78,18 @@ export interface SiteConfig {
   };
 }
 
+/** The two walk worlds a site can choose between (src/views/walk/WalkView.tsx). */
+export type WalkWorldName = "campus" | "classic";
+export const WALK_WORLDS: readonly WalkWorldName[] = ["campus", "classic"];
+
 export const SITE = siteFile as SiteConfig;
+
+/** The walk world this site uses. */
+export const WALK_WORLD: WalkWorldName = SITE.walk?.world === "classic" ? "classic" : "campus";
 
 const setPieces = SITE.walk?.setPieces;
 
-/** The walk world's optional parts, each on unless site.json turns it off. `setPieces` is null for every kind, or the kinds to use. */
+/** The classic walk world's optional parts, each on unless site.json turns it off. `setPieces` is null for every kind, or the kinds to use. */
 export const WALK: { village: boolean; setPieces: readonly string[] | null; keepsakes: boolean; wildlife: boolean; sound: boolean } = {
   village: SITE.walk?.village !== false,
   setPieces: setPieces === false ? [] : Array.isArray(setPieces) ? setPieces : null,

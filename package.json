@@ -23,6 +23,8 @@
     "typecheck": "tsc -p . && tsc -p tsconfig.node.json",
     "manifest": "node scripts/manifest.mjs",
     "import": "node scripts/import-csv.mjs",
+    "art": "node scripts/build-art.mjs",
+    "art:walker": "node scripts/build-walker.mjs",
     "new-site": "node scripts/new-site.mjs",
     "registry:check": "node scripts/check-registry.mjs",
     "join-check": "node scripts/join-check.mjs",
@@ -37,10 +39,12 @@
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "@supabase/realtime-js": "2.117.2",
+    "gsap": "^3.11.3",
     "lucide-react": "^1.51.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "three": "^0.180.0",
+    "three-legacy": "npm:three@^0.148.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -50,6 +54,7 @@
     "@types/react-dom": "^19.3.0",
     "@types/three": "^0.180.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "draco3d": "^1.5.7",
     "typescript": "5.9",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"

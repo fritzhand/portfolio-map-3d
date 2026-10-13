@@ -295,6 +295,19 @@
 .walk-travel-message { max-width: 200px; padding: 8px; border-radius: var(--radius-sm); color: var(--text); background: var(--surface); font: 400 13px/1.5 var(--font-sans); }
 @media (max-width: 760px) { .walk-travel-controls { left: 10px; bottom: calc(var(--sheet-h) + 12px); } }
 
+/* ---- the island overlay (src/island): shared pieces of its HUD ---- */
+.island-layer { position: absolute; inset: 0; z-index: 4; pointer-events: none; overflow: hidden; }
+.island-layer > .walk-district-label,
+.island-layer > .walk-prompt,
+.island-layer > .walk-portal-card { position: absolute; left: 0; top: 0; will-change: transform; }
+.island-layer > .walk-district-label { pointer-events: auto; transform-origin: 50% 100%; }
+.island-layer > .walk-prompt { pointer-events: auto; left: 50%; top: auto; bottom: 24px; transform: translateX(-50%); }
+.island-layer > .walk-prompt[hidden] { display: none; }
+.island-layer > .walk-portal-card { pointer-events: auto; }
+.island-layer > .walk-portal-card[hidden] { display: none; }
+.island-layer > .island-sound { position: absolute; right: 12px; bottom: 12px; pointer-events: auto; }
+.island-layer > .island-hint { pointer-events: none; }
+
 /* ---------- keepsakes, sound and the find toast ---------- */
 .walk-keepsakes { font-variant-numeric: tabular-nums; }
 .walk-keepsakes svg { color: var(--scene-flag); }

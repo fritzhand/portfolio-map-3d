@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACCEPTED_NEXUS_URLS, ID_PATTERN, SHARED_HOSTS, canVouch, MAINTAINERS, MANIFEST_FILE, NEXUS_URL, OWNER_DNS_LABEL, arrivalFrom, bareHost, cameFromNexus, instanceHref, manifestUrl, nexusHref, normalizeUrl, onPublisherDomain, ownerTxtValue, pageLinksTo } from "./protocol.ts";
+import { ACCEPTED_NEXUS_URLS, ID_PATTERN, SHARED_HOSTS, canVouch, MAINTAINERS, MANIFEST_FILE, NEXUS_URL, OWNER_DNS_LABEL, arrivalFrom, bareHost, cameFromNexus, instanceHref, manifestUrl, nexusHref, normalizeUrl, onPublisherDomain, onThisDeployment, ownerTxtValue, pageLinksTo } from "./protocol.ts";
 
 describe("the protocol's constants", () => {
   it("names the Nexus as an https base URL (a path allowed, no trailing slash), and accepts it", () => {
@@ -129,5 +129,24 @@ describe("shared hosting domains", () => {
     expect(onPublisherDomain("https://someone.github.io/map", "https://github.io")).toBe(false);
     expect(onPublisherDomain("https://acme.github.io/map", "https://acme.github.io")).toBe(true);
     expect(SHARED_HOSTS).toContain("github.io");
+  });
+});
+
+describe("onThisDeployment", () => {
+  const preview = "https://portfolio-map-3d-abc123.vercel.app";
+
+  it("moves an address on the Nexus's own site to the deployment it is seen from, path, query and hash kept", () => {
+    expect(onThisDeployment(`${NEXUS_URL}/example`, preview)).toBe(`${preview}/example`);
+    expect(onThisDeployment(`${NEXUS_URL}/example/?from=nexus&view=walk#x`, `${preview}/some/page?q=1`)).toBe(`${preview}/example/?from=nexus&view=walk#x`);
+    expect(onThisDeployment(`${NEXUS_URL}/?world&from=example-collective`, "http://localhost:4173")).toBe("http://localhost:4173/?world&from=example-collective");
+    for (const nexus of ACCEPTED_NEXUS_URLS) expect(onThisDeployment(`${nexus}/example`, preview)).toBe(`${preview}/example`);
+  });
+
+  it("leaves every address alone when seen from the Nexus's own site", () => {
+    for (const nexus of ACCEPTED_NEXUS_URLS) expect(onThisDeployment(`${NEXUS_URL}/example`, `${nexus}/?world`)).toBe(`${NEXUS_URL}/example`);
+  });
+
+  it("leaves another site's address alone, wherever it is seen from", () => {
+    for (const other of ["https://example.org/map", "https://wearenexus.xyz.example/example", "http://wearenexus.xyz/example"]) expect(onThisDeployment(other, preview)).toBe(other);
   });
 });

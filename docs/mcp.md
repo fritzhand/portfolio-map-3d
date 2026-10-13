@@ -32,8 +32,8 @@ Node 22.18 or later, and `npm install` in the repository. Then point your MCP cl
 | `get_status` | The map's settings and counts, what the companies lack (descriptions, logos, websites, services), the validator's problems, and next steps. |
 | `get_taxonomy` | The districts and the vocabularies records use: services, industries served, connection kinds, business models, district icons. |
 | `list_companies`, `get_company` | The companies, briefly or one in full with its sources. |
-| `create_site` | Replaces the fictional example with a blank map for an organization (`npm run new-site`). |
-| `update_site` | Changes `site/site.json`: names, addresses, labels, theme colors, and the walk world's optional parts. |
+| `create_site` | Replaces the fictional example with a blank map for an organization (`npm run new-site`), with the walk world it chooses. |
+| `update_site` | Changes `site/site.json`: names, addresses, labels, theme colors, and the walk world (`walk`): which world, campus or classic ([configuration.md](./configuration.md#the-walk-world)), and the classic world's optional parts, which the campus ignores ([walk-world.md](./walk-world.md#turning-parts-on-and-off)). |
 | `set_districts` | Replaces the districts in `site/taxonomy.json`. |
 | `upsert_company` | Adds a company, or updates one by slug. |
 | `remove_company` | Removes a company, its logo and the connections to it. |
