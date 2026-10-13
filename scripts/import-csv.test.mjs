@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { importCompanies, mergeCompanies, slugify } from "./import-csv.mjs";
+import { companiesFromRows, importCompanies, mergeCompanies, slugify } from "./import-csv.mjs";
 
 const taxonomy = JSON.parse(readFileSync(new URL("../site/taxonomy.json", import.meta.url), "utf8"));
 const source = { kind: "org-records", title: "Test export", retrieved: "2026-10-09" };
@@ -47,6 +47,21 @@ describe("importCompanies", () => {
 
   it("needs a name and a district column", () => {
     expect(() => importCompanies("Company,Track\nX,health", taxonomy, source)).toThrow(/needs a "name" column/);
+  });
+});
+
+describe("companiesFromRows", () => {
+  it("takes lists as arrays or as semicolon-separated text, and checks every item", () => {
+    const [c] = companiesFromRows([{ name: "Acme Robotics", district: "Hardware", founders: ["Ana Ruiz (CEO)", "Li Wei"], keywords: "robots; farms", tags: null }], taxonomy, source);
+    expect(c).toMatchObject({ slug: "acme-robotics", district: "hardware", keywords: ["robots", "farms"], tags: [] });
+    expect(c.founders).toEqual([{ name: "Ana Ruiz", title: "CEO", source }, { name: "Li Wei", title: "Founder", source }]);
+    expect(() => companiesFromRows([{ name: "X Co", district: "health", keywords: ["fine", "ana@x.example"] }], taxonomy, source)).toThrow(/rows\[0\], keywords: holds an email address/);
+  });
+
+  it("names rows and fields the way its caller does", () => {
+    const opts = { where: (i) => `record ${i + 1}`, label: (k) => k.toUpperCase() };
+    expect(() => companiesFromRows([{ name: "X Co", district: "health", location: "Call 813-555-0100" }], taxonomy, source, opts)).toThrow(/record 1, LOCATION: holds a phone number/);
+    expect(() => companiesFromRows([{ name: "", district: "health" }], taxonomy, source)).toThrow(/rows\[0\]: no name/);
   });
 });
 

@@ -80,9 +80,10 @@ function apply(root, write, remove) {
  * Makes a change to site/ under `root` only if it adds no problem: `write` maps paths (from the
  * root, like "site/data/companies.json") to JSON values or Buffers; `remove` lists paths to delete.
  * Throws Refused when the change adds a problem; otherwise writes it and returns the problems and
- * warnings the site still has.
+ * warnings the site still has. With `dryRun`, it checks the change the same way and writes nothing:
+ * the result is what the site would have.
  */
-export function guardedWrite(root, { write = new Map(), remove = [] }, what = "the change") {
+export function guardedWrite(root, { write = new Map(), remove = [] }, what = "the change", { dryRun = false } = {}) {
   for (const rel of [...write.keys(), ...remove]) {
     if (!rel.startsWith("site/") || rel.split("/").includes("..")) throw new Error(`${rel}: the builder only writes inside site/`);
   }
@@ -94,7 +95,7 @@ export function guardedWrite(root, { write = new Map(), remove = [] }, what = "t
     const after = validateSite(tmp);
     const added = addedProblems(before.errors, after.errors);
     if (added.length) throw new Refused(`${what} would break the content contract (docs/data-contract.md)`, added);
-    apply(root, write, remove);
+    if (!dryRun) apply(root, write, remove);
     return { errors: after.errors, warnings: after.warnings };
   } finally {
     rmSync(tmp, { recursive: true, force: true });

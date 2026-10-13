@@ -41,3 +41,10 @@ runs become one space.
 After an import, add what a sheet rarely has, by hand, with sources: descriptions from each
 company's own site, services and industries served for the provider finder, documented
 connections. Then `npm run validate`.
+
+## From another app instead of a file
+
+When the list lives in a CRM, a database or a spreadsheet an AI assistant can reach (HubSpot,
+Airtable, Notion, Google Sheets), the builder's `import_companies` tool takes the same columns as
+rows the assistant read, with the same checks, and previews the import before writing it. See
+[mcp.md](./mcp.md#from-another-app-a-crm-a-database-a-spreadsheet).

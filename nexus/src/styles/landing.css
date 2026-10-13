@@ -558,6 +558,13 @@ a.world-pill-button {
 .setup-links { display: flex; flex-wrap: wrap; gap: 8px 24px; }
 .setup-links a { min-height: var(--touch); font: var(--type-detail); }
 .start-command { display: grid; min-width: 0; gap: 12px; }
+.start-apps { display: grid; gap: 12px; margin-top: 40px; }
+.start-apps h3 { font-size: var(--text-body); line-height: var(--line-body); }
+.start-apps > p { max-width: 64ch; color: var(--text-muted); }
+.app-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0; padding: 0; list-style: none; }
+.app-badge { width: calc(28 * var(--badge-unit, 1px)); height: calc(28 * var(--badge-unit, 1px)); }
+.app-badge svg { width: 62%; height: 62%; }
+.app-badge-file { color: #3f4a5a; }
 
 .service-list {
   display: grid;
