@@ -33,11 +33,21 @@ npx vitest run --config nexus/vite.config.ts    # unit tests
 npx tsc -p nexus/tsconfig.json                  # type check
 npx vite build --config nexus/vite.config.ts    # build to nexus/dist
 npx vite preview --config nexus/vite.config.ts  # serve the build, http://localhost:4180/
+npx playwright test --config nexus/playwright.config.ts  # browser tests, against the build
 ```
 
-The root `package.json` wraps them: `npm run nexus:dev`, `npm run nexus:preview`, and
+The root `package.json` wraps them: `npm run nexus:dev`, `npm run nexus:preview`,
 `npm run nexus:build`, which first refreshes `public/network.json` from the registry, then
-type-checks and builds. Open `/?sample` or `/?world&sample` to work with the sample network.
+type-checks and builds, and `npm run nexus:e2e`, which builds and runs the browser tests. Open
+`/?sample` or `/?world&sample` to work with the sample network.
+
+The browser tests (`e2e/`, Playwright) open the built site in headless Chromium at 1440 × 900 and
+390 × 844, with the sample network: the landing page, the world, a shared address, an arrival,
+search, the district names, the keyboard, and an accessibility check of each page (axe-core, WCAG
+2 A and AA). The 3D scene renders in software, so they need no GPU. The first run needs
+`npx playwright install chromium`; `NEXUS_E2E_CHROMIUM=/path/to/chromium` uses a Chromium already
+on the machine instead. Each test saves a picture of what it saw under `test-results/nexus/`, and
+CI keeps those pictures with the run.
 
 ## The network file
 
@@ -125,6 +135,12 @@ A selected planet shows its districts as moons. Selecting a moon filters the dir
 category controls update the selected moon. Categories use Lucide icons and short labels,
 and company descriptions expand on request.
 
+Each moon's name stands beside it at its whole width, off the planet, the other moons and the
+other names; a name with no room there takes a place on a leader line, and is shortened only at
+the edge of the scene (`three/moonLabels.ts`). Where the scene is too small to name every moon
+(most maps on a phone), each moon keeps a 44 px target and only the chosen district shows its
+name, with the one under the pointer or the keyboard focus; the directory lists them all.
+
 The scene uses one instanced mesh for moons, lower sphere geometry, and a backing-pixel
 budget of 8 million at DPR up to 2.5. Ambient rendering runs at up to 24 fps; interaction
 runs at up to 60 fps. Planet shaders combine an overhead light, light from the core and a
@@ -158,13 +174,15 @@ src/
                      useMusic (one audio element for the visit)
   lib/               pure, unit-tested logic: network (the model), layout (where worlds stand),
                      surface (what a world's surface shows), search, declutter (labels),
-                     route, hud (the HUD's geometry), copy, color, mark (the logo's geometry)
+                     route, hud (the HUD's geometry), keys (the keyboard), copy, color,
+                     mark (the logo's geometry)
   three/             engine (the scene), paint (every canvas), fromModel, cpuCanvas,
                      contextWatch, webgl, aurora, moonLabels, moonLayout
   styles/            tokens.css (shared colors and type), base, landing, world, directory, aurora
   sample.ts          the fictional sample network (?sample only)
   config.ts          the Services section, the promo video and the music
   agent.ts           tools for AI agents (WebMCP): list_maps, search_network, open_map (docs/mcp.md)
+e2e/                 browser tests (Playwright, axe-core); playwright.config.ts beside it
 ```
 
 - **Layout** (`lib/layout.ts`): a golden-angle spiral on a tilted disc. Slots go in join order, so
@@ -174,7 +192,10 @@ src/
   company counts, in the map's own district colors, a light for each company, and a rim in the
   map's accent.
 - **Labels** are painted on canvases and kept apart on screen (`lib/declutter.ts`): the world in
-  view keeps its label, then the nearest; none sits under the HUD or the landing headline.
+  view keeps its label, then the nearest; none sits under the HUD, the music button or the landing
+  headline, and none covers a world other than its own. A label stands above its world, or below
+  or beside it when that place is taken; a world whose label has no room shows its logo alone, so
+  every world on screen is identified.
 - **No network assets in 3D**: no remote fonts, models or environment maps. Labels use the page's
   font once it has loaded (falling back to system-ui).
 - **Render on demand**: the loop runs only while something moves and stops when the scene is
@@ -183,6 +204,10 @@ src/
 - **WebGL context loss**: every texture's canvas is CPU-backed and repainted after a restore; if
   the browser does not restore the context within 3 seconds, the engine is rebuilt with a fresh
   canvas. Without WebGL 2 the world mode shows the network as a list.
-- **Accessibility**: every world is reachable from the list of worlds and from search, by keyboard
-  (`/` focuses search, Esc closes what is open); landmarks, a skip link, visible focus, 44 px touch
-  targets, and announcements for search results and arrivals.
+- **Accessibility**: every world is reachable from the list of worlds and from search, by
+  keyboard; landmarks, a skip link, visible focus, 44 px touch targets, and announcements for
+  search results and arrivals.
+- **Keyboard** (`lib/keys.ts`): the arrow keys turn the view, `+` and `-` zoom, `[` and `]` step
+  through the maps in the order of the list, `0` returns to the overview, `/` focuses search, Esc
+  closes what is open, and `?` (or the keyboard button in the top bar) lists these. A key typed
+  into a field is text; in the lists and the panel the arrow keys scroll.

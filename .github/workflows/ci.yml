@@ -39,3 +39,12 @@ jobs:
       - run: node scripts/build-network.mjs --offline --keep-on-error
       - run: npx tsc -p nexus/tsconfig.json
       - run: npx vite build --config nexus/vite.config.ts
+      # The built Nexus in a headless browser, at a desktop and a phone size (nexus/e2e).
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --config nexus/playwright.config.ts
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: nexus-pictures
+          path: test-results/nexus
+          retention-days: 14

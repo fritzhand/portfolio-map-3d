@@ -101,7 +101,6 @@ export function NetworkSearch({ index, onWorld, onCompany, inputRef }: Props) {
         onFocus={() => setOpen(true)}
         onKeyDown={onInputKey}
         aria-controls={`${id}-results`}
-        aria-expanded={showing}
       />
       {query ? (
         <button

@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { instanceHref } from "../../../federation/protocol.ts";
 import { HUD, hudInsets, isPhone, panelWidth } from "../lib/hud.ts";
+import { keyAction, SHORTCUTS, stepWorld } from "../lib/keys.ts";
 import { planetEntryHref } from "../lib/entry.ts";
 import type { World } from "../lib/network.ts";
 import { LANDING, namesArrival, sameRoute, type Route } from "../lib/route.ts";
@@ -14,7 +15,7 @@ import { useViewport } from "../hooks/useMedia.ts";
 import type { NetworkState } from "../hooks/useNetwork.ts";
 import { navigate, routeHref } from "../hooks/useRoute.ts";
 import type { NexusEngine } from "../three/engine.ts";
-import { ArrowLeft, ArrowRight, Close, ListIcon, Mark, Orbit } from "./Icons.tsx";
+import { ArrowLeft, ArrowRight, Close, Keyboard, ListIcon, Mark, Orbit } from "./Icons.tsx";
 import { MusicButton } from "./MusicButton.tsx";
 import { EmptyNetwork, NetworkList } from "./NetworkList.tsx";
 import { NetworkSearch } from "./NetworkSearch.tsx";
@@ -83,7 +84,9 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
   const [panelNonce, setPanelNonce] = useState(0);
   const [toast, setToast] = useState<Arrival | null>(null);
   const [portal, setPortal] = useState(false);
+  const [keysOpen, setKeysOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
+  const musicButton = useRef<HTMLButtonElement>(null);
   const arrival = useRef(route.from ? { from: route.from, via: route.via } : null);
   // Any from= in the address, well formed or not (a malformed id is never echoed back).
   const namedArrival = useRef(namesArrival(window.location.search));
@@ -154,8 +157,13 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
   const insets = hudInsets(viewport, { panel: !!iw, rail: railOpen && !phone, sheet: phone && sheetOpen });
   useEffect(() => {
     engine?.setInsets(insets);
+    // The floating music button where it is drawn (its place follows the insets and the device's
+    // safe area): no label goes under it. The scene fills the viewport, so the two share an origin.
+    const music = musicButton.current?.getBoundingClientRect();
+    engine?.setKeepOut(music ? [{ l: music.left, t: music.top, r: music.right, b: music.bottom }] : []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine, insets.top, insets.right, insets.bottom, insets.left]);
+  }, [engine, viewport.w, viewport.h, insets.top, insets.right, insets.bottom, insets.left]);
+  useEffect(() => () => engine?.setKeepOut([]), [engine]);
 
   // The arrival note, once the network is known: a welcome only for a map that is a world here;
   // any other from= (not in the network, not verified, malformed) gets the neutral note.
@@ -201,21 +209,34 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
     if (selected) engine?.setDistrict(panelDistrict ?? null);
   }, [engine, selected, panelDistrict, panelNonce]);
 
-  // Esc closes what is open; "/" goes to search.
+  // The keyboard (lib/keys.ts): Esc closes what is open; the other keys turn, zoom and step the view.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
       if (e.key === "Escape") {
-        if (phone && sheetOpen) setSheetOpen(false);
+        if (keysOpen) setKeysOpen(false);
+        else if (phone && sheetOpen) setSheetOpen(false);
         else if (iw) closePanel();
-      } else if (e.key === "/" && !isTyping(e.target)) {
-        e.preventDefault();
-        searchInput.current?.focus();
+        return;
+      }
+      const action = keyAction(e);
+      if (!action || isTyping(e.target) || gl === "unavailable") return;
+      // In the lists and the panel the arrow keys scroll, as they do anywhere else.
+      if (action.kind === "orbit" && e.target instanceof Element && e.target.closest(".panel, .rail, .search, .keys-card")) return;
+      e.preventDefault();
+      if (action.kind === "orbit") engine?.orbit(action.azimuth, action.polar);
+      else if (action.kind === "zoom") engine?.zoom(action.factor);
+      else if (action.kind === "overview") overview();
+      else if (action.kind === "search") searchInput.current?.focus();
+      else if (action.kind === "help") setKeysOpen((open) => !open);
+      else {
+        const next = stepWorld(model?.worlds.map((w) => w.id) ?? [], selected, action.by);
+        if (next) openWorld(next);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [phone, sheetOpen, iw, closePanel]);
+  }, [phone, sheetOpen, keysOpen, iw, closePanel, engine, gl, model, selected, openWorld, overview]);
 
   const toastRegion = (
     <div className="toast-region" role="status" aria-live="polite">
@@ -227,10 +248,11 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
     return (
       <div className="world-fallback">
         <header className="fallback-head">
-          <a className="hud-brand" href={routeHref({ ...LANDING, sample: route.sample })} onClick={(event) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); leave(); } }} aria-label="The Nexus, home">
+          <a className="hud-brand" href={routeHref({ ...LANDING, sample: route.sample })} onClick={(event) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); leave(); } }}>
             <Mark size={28} className="brand-mark" />
-            <span className="hud-brand-name">Nexus</span>
+            <span className="hud-brand-name"><span className="sr-only">The </span>Nexus</span>
             {route.sample ? <span className="sample-badge">Sample data</span> : null}
+            <span className="sr-only">, home</span>
           </a>
           <button type="button" className="btn btn-outline btn-small" onClick={leave}>
             <ArrowLeft size={16} /> Home
@@ -299,10 +321,11 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
       </main>
 
       <header className="hud-top">
-        <a className="hud-brand" href={routeHref({ ...LANDING, sample: route.sample })} onClick={(event) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); leave(); } }} aria-label="The Nexus, home">
+        <a className="hud-brand" href={routeHref({ ...LANDING, sample: route.sample })} onClick={(event) => { if (!event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) { event.preventDefault(); leave(); } }}>
           <Mark size={28} className="brand-mark" />
-          <span className="hud-brand-name">Nexus</span>
+          <span className="hud-brand-name"><span className="sr-only">The </span>Nexus</span>
           {route.sample ? <span className="sample-badge">Sample data</span> : null}
+          <span className="sr-only">, home</span>
         </a>
         <NetworkSearch index={index} onWorld={(id, filter) => openWorld(id, { filter })} onCompany={(id, slug) => openWorld(id, { highlight: slug })} inputRef={searchInput} />
         <div className="hud-actions">
@@ -319,8 +342,34 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
             <ArrowLeft size={20} />
             <span className="hud-btn-text">Home</span>
           </button>
+          {phone ? null : (
+            <button type="button" className="hud-btn hud-btn-icon" aria-expanded={keysOpen} aria-controls="keys-card" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setKeysOpen(!keysOpen)}>
+              <Keyboard size={20} />
+            </button>
+          )}
         </div>
       </header>
+
+      <section id="keys-card" className="keys-card" aria-labelledby="keys-title" hidden={!keysOpen}>
+        <div className="keys-head">
+          <h2 id="keys-title">Keyboard</h2>
+          <button type="button" className="icon-btn icon-btn-small" onClick={() => setKeysOpen(false)} aria-label="Hide the keyboard shortcuts">
+            <Close size={18} />
+          </button>
+        </div>
+        <dl className="keys-list">
+          {SHORTCUTS.map((s) => (
+            <div key={s.does}>
+              <dt>
+                {s.keys.map((k) => (
+                  <kbd key={k}>{k}</kbd>
+                ))}
+              </dt>
+              <dd>{s.does}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <nav id="world-list" className="rail" aria-labelledby="world-list-title" hidden={!listShown}>
         <div className="rail-head">
@@ -337,7 +386,7 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
       {iw ? <WorldPanel key={`${iw.world.id}:${panelNonce}`} iw={iw} highlight={highlight} initialFilter={panelFilter} initialDistrict={panelDistrict} enterHref={planetEntryHref(iw.world)} onDistrictChange={(district) => setPanelDistrict(district ?? undefined)} onClose={closePanel} /> : null}
 
       {toastRegion}
-      <MusicButton />
+      <MusicButton ref={musicButton} />
     </div>
   );
 }
