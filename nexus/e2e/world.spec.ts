@@ -68,6 +68,22 @@ test.describe("the world", () => {
     await picture(page, info, "district-names");
   });
 
+  test("keeps the district names clear of the music button", async ({ page }) => {
+    // A world with few enough districts to name them all, on a phone too.
+    await page.goto("/?world=sample-harbor&sample");
+    await sceneReady(page);
+    const names = page.locator(".moon-annotation span:visible");
+    await expect(names).toHaveCount(4);
+    const button = await page.getByRole("button", { name: "Music" }).boundingBox();
+    expect(button).not.toBeNull();
+    for (const name of await names.all()) {
+      const box = await name.boundingBox();
+      if (!box || !button) continue;
+      const apart = box.x >= button.x + button.width || button.x >= box.x + box.width || box.y >= button.y + button.height || button.y >= box.y + box.height;
+      expect(apart, "a district name sits under the music button").toBe(true);
+    }
+  });
+
   test("names only the chosen district on a phone", async ({ page }, info) => {
     test.skip(!isPhone(info), "a wide screen names every district");
     await page.goto("/?world=sample-foundry&sample");
@@ -161,6 +177,8 @@ test.describe("with motion", () => {
     await openWorldList(page, info);
     await page.getByRole("navigation", { name: /^Maps/ }).getByRole("button", { name: /Sample Coastline Fund/ }).click();
     await expect(page.getByRole("heading", { level: 2, name: /Sample Coastline Fund/ })).toBeVisible();
+    // Nothing on the page marks the end of a flight. The wait is only for the picture, so that it
+    // shows the view the flight ends on; no assertion depends on it.
     await page.waitForTimeout(2500);
     await picture(page, info, "world-after-flight");
     await page.getByRole("button", { name: /Overview/ }).click();

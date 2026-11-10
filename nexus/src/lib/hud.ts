@@ -14,8 +14,6 @@ export const HUD = {
   gap: 12,
   /** A bottom sheet's share of the screen height (phones). */
   sheet: 0.58,
-  /** The floating music button's width and height (base.css .music-fab). */
-  music: 48,
 } as const;
 
 export interface HudState {
@@ -49,11 +47,4 @@ export function hudInsets(view: { w: number; h: number }, s: HudState): Insets {
     right: s.panel ? panelWidth(view.w) + HUD.gap * 2 : 0,
     bottom: 0,
   };
-}
-
-/** Where the floating music button sits over the scene (base.css .music-fab): no label goes under it. */
-export function musicButtonRect(view: { w: number; h: number }, insets: Insets): { l: number; t: number; r: number; b: number } {
-  const right = Math.max(insets.right, HUD.gap);
-  const bottom = insets.bottom + HUD.gap;
-  return { l: view.w - right - HUD.music, t: view.h - bottom - HUD.music, r: view.w - right, b: view.h - bottom };
 }

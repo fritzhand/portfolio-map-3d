@@ -4,8 +4,7 @@
    starts framed on that map's world, with a welcome. */
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type RefObject } from "react";
 import { instanceHref } from "../../../federation/protocol.ts";
-import { MUSIC } from "../config.ts";
-import { HUD, hudInsets, isPhone, musicButtonRect, panelWidth } from "../lib/hud.ts";
+import { HUD, hudInsets, isPhone, panelWidth } from "../lib/hud.ts";
 import { keyAction, SHORTCUTS, stepWorld } from "../lib/keys.ts";
 import { planetEntryHref } from "../lib/entry.ts";
 import type { World } from "../lib/network.ts";
@@ -87,6 +86,7 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
   const [portal, setPortal] = useState(false);
   const [keysOpen, setKeysOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
+  const musicButton = useRef<HTMLButtonElement>(null);
   const arrival = useRef(route.from ? { from: route.from, via: route.via } : null);
   // Any from= in the address, well formed or not (a malformed id is never echoed back).
   const namedArrival = useRef(namesArrival(window.location.search));
@@ -157,7 +157,10 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
   const insets = hudInsets(viewport, { panel: !!iw, rail: railOpen && !phone, sheet: phone && sheetOpen });
   useEffect(() => {
     engine?.setInsets(insets);
-    engine?.setKeepOut(MUSIC ? [musicButtonRect(viewport, insets)] : []);
+    // The floating music button where it is drawn (its place follows the insets and the device's
+    // safe area): no label goes under it. The scene fills the viewport, so the two share an origin.
+    const music = musicButton.current?.getBoundingClientRect();
+    engine?.setKeepOut(music ? [{ l: music.left, t: music.top, r: music.right, b: music.bottom }] : []);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, viewport.w, viewport.h, insets.top, insets.right, insets.bottom, insets.left]);
   useEffect(() => () => engine?.setKeepOut([]), [engine]);
@@ -383,7 +386,7 @@ export function WorldMode({ route, net, engine, gl, reduced, pickRef, onRetry }:
       {iw ? <WorldPanel key={`${iw.world.id}:${panelNonce}`} iw={iw} highlight={highlight} initialFilter={panelFilter} initialDistrict={panelDistrict} enterHref={planetEntryHref(iw.world)} onDistrictChange={(district) => setPanelDistrict(district ?? undefined)} onClose={closePanel} /> : null}
 
       {toastRegion}
-      <MusicButton />
+      <MusicButton ref={musicButton} />
     </div>
   );
 }

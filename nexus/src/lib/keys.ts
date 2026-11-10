@@ -16,6 +16,7 @@ export const ORBIT_STEP = Math.PI / 30;
 /** One press of + brings the camera to this share of its distance. */
 export const ZOOM_STEP = 0.85;
 
+/** What a key press does in the world mode, or null for a key that is not a shortcut. */
 export function keyAction(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }): KeyAction | null {
   if (e.ctrlKey || e.metaKey || e.altKey) return null;
   switch (e.key) {

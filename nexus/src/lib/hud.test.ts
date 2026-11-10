@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { HUD, hudInsets, isPhone, musicButtonRect, panelWidth } from "./hud.ts";
+import { HUD, hudInsets, isPhone, panelWidth } from "./hud.ts";
 
 describe("hudInsets", () => {
   it("leaves room for the rail and the panel on desktop", () => {
@@ -16,16 +16,5 @@ describe("hudInsets", () => {
   it("narrows the panel on tablets", () => {
     expect(panelWidth(800)).toBe(368);
     expect(panelWidth(2000)).toBe(HUD.panel);
-  });
-
-  it("places the music button in the scene's bottom right corner, clear of the panel or the sheet", () => {
-    const desktop = { w: 1440, h: 900 };
-    expect(musicButtonRect(desktop, hudInsets(desktop, { panel: false, rail: true, sheet: false }))).toEqual({ l: 1440 - HUD.gap - HUD.music, t: 900 - HUD.gap - HUD.music, r: 1440 - HUD.gap, b: 900 - HUD.gap });
-    const beside = musicButtonRect(desktop, hudInsets(desktop, { panel: true, rail: true, sheet: false }));
-    expect(beside.r).toBe(1440 - HUD.panel - 2 * HUD.gap);
-    const phone = { w: 390, h: 844 };
-    const above = musicButtonRect(phone, hudInsets(phone, { panel: true, rail: false, sheet: false }));
-    expect(above.b).toBe(844 - Math.round(844 * HUD.sheet) - HUD.gap);
-    expect(above.r - above.l).toBe(HUD.music);
   });
 });

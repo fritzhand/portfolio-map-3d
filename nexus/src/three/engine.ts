@@ -1524,7 +1524,7 @@ export class NexusEngine {
       return { x: ((v.x + 1) / 2) * W, y: ((1 - v.y) / 2) * H, depth, behind: v.z > 1 || depth <= 0 };
     };
     const GAP = 6;
-    const items: { label: LabelObject; chip: LabelObject | null; base: number; box: LabelBox; x: number; y: number; px: number }[] = [];
+    const items: { label: LabelObject; chip: LabelObject | null; chipFrom: number; base: number; box: LabelBox; x: number; y: number; px: number }[] = [];
     const discs: Disc[] = [];
     const add = (id: string, label: LabelObject, chip: LabelObject | null, center: THREE.Vector3, radius: number, lift: number, solid: boolean) => {
       const body = onScreen(center);
@@ -1549,6 +1549,8 @@ export class NexusEngine {
         { l: disc.x - reach - w, r: disc.x - reach, t: disc.y - px / 2, b: disc.y + px / 2 },
       ];
       const alternates: Rect[] = focus ? [] : around(pw);
+      // Among the places (the one above, then the alternates), the logo's begin here.
+      const chipFrom = 1 + alternates.length;
       if (chip && !focus) {
         chip.sprite.scale.set(height * chip.aspect, height, 1);
         chip.sprite.position.y = label.sprite.position.y;
@@ -1563,6 +1565,7 @@ export class NexusEngine {
       items.push({
         label,
         chip,
+        chipFrom,
         x,
         y,
         px,
@@ -1575,13 +1578,13 @@ export class NexusEngine {
     if (this.coreLabel) add("core", this.coreLabel, null, this.core.position, LAYOUT.coreRadius * 1.5, LAYOUT.coreRadius * 2.3, this.core.visible);
     const candidates = items.filter((it) => it.base > 0);
     const taken = place(candidates.map((it) => it.box), area, { discs, blocked: hero && this.heroOverlay ? [...this.keepOut, this.heroOverlay] : this.keepOut });
-    // Which place each label or logo takes now: the label's four sides come first, then the logo's.
+    // Which place each label or logo takes now: the label's sides come first, then the logo's.
     const sides = new Map<LabelObject, number>();
     const shown: Rect[] = [];
     candidates.forEach((it, i) => {
       const at = taken[i];
       if (at < 0) return;
-      const sprite = it.chip && at >= 4 ? it.chip : it.label;
+      const sprite = it.chip && at >= it.chipFrom ? it.chip : it.label;
       const rect = at ? it.box.alternates![at - 1] : it.box.rect;
       // Sprite centers shift the label alone: its anchor stays above its world.
       sprite.sprite.center.set(0.5 + (it.x - (rect.l + rect.r) / 2) / Math.max(1, rect.r - rect.l), (rect.b - it.y) / Math.max(1, it.px));
