@@ -11,7 +11,7 @@ import { planBands, planDots, type SurfaceCompany, type SurfaceDistrict } from "
 export const FONT_FAMILY = '"DM Sans", system-ui, sans-serif';
 export const HEADING_FONT_FAMILY = '"Instrument Sans", system-ui, sans-serif';
 
-function fontFamily(heading = false): string {
+export function fontFamily(heading = false): string {
   if (typeof document === "undefined") return heading ? HEADING_FONT_FAMILY : FONT_FAMILY;
   const css = getComputedStyle(document.documentElement);
   return (heading ? css.getPropertyValue("--font-heading") || css.getPropertyValue("--heading") : css.getPropertyValue("--font")).trim() || (heading ? HEADING_FONT_FAMILY : FONT_FAMILY);
@@ -154,6 +154,8 @@ export interface LabelContent {
   dim: boolean;
   /** Draw the Nexus mark instead of initials (the core's label). */
   mark?: boolean;
+  /** The badge alone on a round plate: what a world shows where its whole label does not fit. */
+  chip?: boolean;
 }
 
 /** A label's layout in logical pixels (the canvas is `scale` times larger). */
@@ -176,13 +178,15 @@ const subtitleFont = (s: number) => `400 ${LABEL.subtitle * s}px ${fontFamily()}
 
 /** The canvas size a label needs at `scale`. */
 export function labelSize(ctx: CanvasRenderingContext2D, c: LabelContent, scale: number): { w: number; h: number } {
+  const h = Math.ceil((LABEL.height * scale) / 4) * 4;
+  if (c.chip) return { w: h, h };
   ctx.font = titleFont(scale);
   const tw = ctx.measureText(fitText(ctx, c.title, LABEL.maxText * scale)).width;
   ctx.font = subtitleFont(scale);
   const sw = ctx.measureText(fitText(ctx, c.subtitle, LABEL.maxText * scale)).width;
   const w = (LABEL.pad + LABEL.badge + LABEL.gap + LABEL.pad * 1.3) * scale + Math.max(tw, sw);
   // Whole multiples of 4 keep texture rows aligned.
-  return { w: Math.ceil(w / 4) * 4, h: Math.ceil((LABEL.height * scale) / 4) * 4 };
+  return { w: Math.ceil(w / 4) * 4, h };
 }
 
 function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
@@ -268,7 +272,7 @@ export function paintLabel(ctx: CanvasRenderingContext2D, w: number, h: number, 
 
   // The badge: the logo on a light plate, the Nexus mark, or initials on the accent.
   const br = (LABEL.badge * s) / 2;
-  const bx = LABEL.pad * s + br;
+  const bx = c.chip ? w / 2 : LABEL.pad * s + br;
   const by = h / 2;
   ctx.beginPath();
   ctx.arc(bx, by, br, 0, Math.PI * 2);
@@ -295,6 +299,10 @@ export function paintLabel(ctx: CanvasRenderingContext2D, w: number, h: number, 
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillText(c.initials, bx, by + 1 * s);
+  }
+  if (c.chip) {
+    ctx.restore();
+    return;
   }
 
   // Name and counts.

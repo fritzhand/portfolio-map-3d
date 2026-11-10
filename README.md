@@ -209,6 +209,7 @@ npm run art            # rebuild the campus's models with Blender 5 (art/README.
 npm run registry:check # the registry's entries (CI runs it)
 npm run nexus:dev      # the Nexus, locally (add ?sample for sample worlds)
 npm run nexus:build    # fetch the network (scripts/build-network.mjs) and build the Nexus
+npm run nexus:e2e      # build the Nexus and test it in a headless browser (nexus/README.md)
 ```
 
 In development, `?world=classic` or `?world=campus` on the walk view tries the other world without

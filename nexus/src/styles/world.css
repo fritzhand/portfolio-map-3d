@@ -112,6 +112,80 @@
   font-family: var(--mono);
 }
 
+.hud-btn-icon {
+  padding: 0 10px;
+}
+
+/* ---------- Keyboard shortcuts ---------- */
+
+.keys-card {
+  position: absolute;
+  z-index: 19;
+  top: var(--top-h);
+  right: calc(var(--inset-r) + var(--gap));
+  width: min(300px, calc(100% - 2 * var(--gap)));
+  padding: 10px 10px 16px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--glass-strong);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.keys-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.keys-head h2 {
+  margin: 0;
+  font-size: var(--text-body);
+}
+
+.keys-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding-right: 6px;
+}
+
+.keys-list > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.keys-list dt {
+  display: flex;
+  gap: 4px;
+}
+
+.keys-list dd {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-detail);
+  text-align: right;
+}
+
+.keys-list kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: var(--text-detail);
+  font-weight: 600;
+}
+
 /* ---------- Search ---------- */
 
 .search {

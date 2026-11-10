@@ -1,7 +1,7 @@
 /* Lucide for interface controls; original artwork for the Nexus and GitHub marks. */
 import { useId } from "react";
 import { MARK, closedPath, ringFront } from "../lib/mark.ts";
-export { ArrowRight, ArrowLeft, ArrowUpRight as External, Search as SearchIcon, X as Close, Copy as CopyIcon, Check, ChevronDown, List as ListIcon, Orbit, Globe2 as Globe, MapPin as Walk, ListFilter as Directory, Music2 as MusicNote } from "lucide-react";
+export { ArrowRight, ArrowLeft, ArrowUpRight as External, Search as SearchIcon, X as Close, Copy as CopyIcon, Check, ChevronDown, List as ListIcon, Orbit, Globe2 as Globe, MapPin as Walk, ListFilter as Directory, Music2 as MusicNote, Keyboard } from "lucide-react";
 type P = { size?: number; className?: string };
 
 /** Animated bars retain the music control's reduced-motion behavior. */

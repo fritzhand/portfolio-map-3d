@@ -18,7 +18,7 @@
    GPU resource. */
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { declutter, overlaps, type LabelBox, type Rect } from "../lib/declutter.ts";
+import { place, type Disc, type LabelBox, type Rect } from "../lib/declutter.ts";
 import { seeded } from "../lib/hash.ts";
 import { LAYOUT, extent, type Placement } from "../lib/layout.ts";
 import type { SurfaceCompany, SurfaceDistrict } from "../lib/surface.ts";
@@ -69,6 +69,8 @@ interface WorldObject {
   material: THREE.ShaderMaterial;
   surface: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; texture: THREE.CanvasTexture };
   label: LabelObject;
+  /** The world's logo alone, shown where its whole label does not fit. */
+  chip: LabelObject;
   logo: HTMLImageElement | null;
 }
 
@@ -83,6 +85,8 @@ interface LabelObject {
   scale: number;
   /** The opacity shown now (it eases toward its target as labels make room for each other). */
   opacity: number;
+  /** The place it last took around its world (lib/declutter.ts place), or -1 before it was shown. */
+  side: number;
 }
 
 interface MoonSystem {
@@ -326,6 +330,7 @@ export class NexusEngine {
   private insetsGoal: Insets = { top: 0, right: 0, bottom: 0, left: 0 };
   private insetProjection = { w: 0, h: 0, x: NaN, y: NaN };
   private heroOverlay: Rect | null = null;
+  private keepOut: Rect[] = [];
 
   private specs: EngineWorld[] = [];
   private coreSubtitle = "";
@@ -577,11 +582,15 @@ export class NexusEngine {
       mesh.rotation.y = (p.slot * 1.7) % (Math.PI * 2);
       mesh.userData.worldId = spec.id;
       this.worldGroup.add(mesh);
-      const label = this.makeLabel({ title: spec.title, subtitle: spec.subtitle, accent: spec.accent, initials: spec.initials, logo: null, dim: spec.dim }, labelScale);
-      label.sprite.userData.worldId = spec.id;
-      label.sprite.position.set(pos.x, pos.y + p.radius + 0.5, pos.z);
-      this.worldGroup.add(label.sprite);
-      const obj: WorldObject = { spec, pos, radius: p.radius, mesh, material, surface: { canvas: sc, ctx: sctx, texture }, label, logo: null };
+      const content: LabelContent = { title: spec.title, subtitle: spec.subtitle, accent: spec.accent, initials: spec.initials, logo: null, dim: spec.dim };
+      const label = this.makeLabel(content, labelScale);
+      const chip = this.makeLabel({ ...content, chip: true }, labelScale);
+      for (const l of [label, chip]) {
+        l.sprite.userData.worldId = spec.id;
+        l.sprite.position.set(pos.x, pos.y + p.radius + 0.5, pos.z);
+        this.worldGroup.add(l.sprite);
+      }
+      const obj: WorldObject = { spec, pos, radius: p.radius, mesh, material, surface: { canvas: sc, ctx: sctx, texture }, label, chip, logo: null };
       this.worlds.set(spec.id, obj);
       if (spec.logoUrl) this.loadLogo(obj, spec.logoUrl);
     }
@@ -612,6 +621,13 @@ export class NexusEngine {
     this.invalidate();
   }
 
+  /** Pieces of the HUD that float over the scene (the music button): no label goes under them. */
+  setKeepOut(rects: readonly Rect[]): void {
+    this.keepOut = rects.map((r) => ({ ...r }));
+    this.labelsNeedLayout = true;
+    this.invalidate();
+  }
+
   /** Keep the selected district's moon and label in sync with the directory filter. */
   setDistrict(district: string | null): void {
     if (!this.moons || this.moons.selected === district) return;
@@ -629,6 +645,20 @@ export class NexusEngine {
     const offset = this.camera.position.clone().sub(this.controls.target);
     const distance = THREE.MathUtils.clamp(offset.length() * factor, this.controls.minDistance, this.controls.maxDistance);
     this.camera.position.copy(this.controls.target).add(offset.setLength(distance));
+    this.syncControls();
+    this.invalidate();
+  }
+
+  /** Turns the camera around what it looks at, in radians: `azimuth` sideways, `polar` up or down (the arrow keys). */
+  orbit(azimuth: number, polar: number): void {
+    this.flight = null;
+    this.userMoved = true;
+    this.idleUntil = performance.now() + IDLE_BEFORE_DRIFT_MS;
+    const offset = this.camera.position.clone().sub(this.controls.target);
+    const at = new THREE.Spherical().setFromVector3(offset);
+    at.theta += azimuth;
+    at.phi = THREE.MathUtils.clamp(at.phi + polar, this.controls.minPolarAngle, this.controls.maxPolarAngle);
+    this.camera.position.copy(this.controls.target).add(offset.setFromSpherical(at));
     this.syncControls();
     this.invalidate();
   }
@@ -688,8 +718,12 @@ export class NexusEngine {
 
   /** Repaints every label (the page's font has loaded). */
   repaintLabels(): void {
-    for (const w of this.worlds.values()) this.paintLabelObject(w.label);
+    for (const w of this.worlds.values()) {
+      this.paintLabelObject(w.label);
+      this.paintLabelObject(w.chip);
+    }
     if (this.coreLabel) this.paintLabelObject(this.coreLabel);
+    this.moons?.labels.remeasure();
     this.labelsNeedLayout = true;
     this.invalidate();
   }
@@ -827,7 +861,7 @@ export class NexusEngine {
     sprite.renderOrder = 5;
     material.opacity = 0;
     sprite.visible = false;
-    const label: LabelObject = { sprite, material, canvas, ctx, texture, aspect: 1, content, scale, opacity: 0 };
+    const label: LabelObject = { sprite, material, canvas, ctx, texture, aspect: 1, content, scale, opacity: 0, side: -1 };
     this.paintLabelObject(label);
     return label;
   }
@@ -870,8 +904,10 @@ export class NexusEngine {
     img.onload = () => {
       if (this.disposed || this.worlds.get(obj.spec.id) !== obj) return;
       obj.logo = img;
-      obj.label.content = { ...obj.label.content, logo: img };
-      this.paintLabelObject(obj.label);
+      for (const l of [obj.label, obj.chip]) {
+        l.content = { ...l.content, logo: img };
+        this.paintLabelObject(l);
+      }
       this.invalidate();
     };
     img.src = url;
@@ -991,8 +1027,10 @@ export class NexusEngine {
       if (w.logo) w.logo.onload = null;
       w.material.dispose();
       w.surface.texture.dispose();
-      w.label.material.dispose();
-      w.label.texture.dispose();
+      for (const l of [w.label, w.chip]) {
+        l.material.dispose();
+        l.texture.dispose();
+      }
     }
     this.worlds.clear();
     if (this.atmosphere) {
@@ -1019,8 +1057,8 @@ export class NexusEngine {
     for (const w of this.worlds.values()) {
       w.mesh.visible = !id || w.spec.id === id;
       w.mesh.geometry = w.spec.id === id ? this.sphere : this.overviewSphere;
-      if (id && (w.spec.id !== id || w.spec.districts.length > 14)) {
-        w.label.sprite.visible = false;w.label.opacity = 0;w.label.material.opacity = 0;
+      for (const l of id ? (w.spec.id !== id || w.spec.districts.length > 14 ? [w.label, w.chip] : [w.chip]) : []) {
+        l.sprite.visible = false;l.opacity = 0;l.material.opacity = 0;
       }
     }
     this.core.visible = !id;
@@ -1128,6 +1166,7 @@ export class NexusEngine {
       if (moons.mesh.instanceColor) moons.mesh.instanceColor.needsUpdate = true;
     }
     moons.labels.setSelected(moons.selected);
+    moons.labels.setHovered(moons.hover === null ? null : moons.placements[moons.hover].slug);
   }
 
   /** After a context restore: every canvas is painted again and uploaded. */
@@ -1455,8 +1494,10 @@ export class NexusEngine {
 
   /**
    * Labels keep a steady size on screen up to a distance, then shrink, then fade out. They never
-   * overlap one another or sit under the HUD (lib/declutter.ts): the world in view keeps its
-   * label, then the nearest win. Returns true while a label is still fading.
+   * overlap one another, sit under the HUD or cover another world (lib/declutter.ts): the world
+   * in view keeps its label, then the nearest win. A world's label stands above it, or on another
+   * side when that is taken; one with no room shows its logo alone. Returns true while a label is
+   * still fading.
    */
   private updateLabels(dt: number): boolean {
     const { w: W, h: H } = this.size;
@@ -1474,64 +1515,113 @@ export class NexusEngine {
     const moons = this.moons;
     const ins = this.insetsGoal;
     const area = { l: ins.left + 4, t: ins.top + 4, r: W - ins.right - 4, b: H - ins.bottom - 4 };
+    const inverse = this.camera.matrixWorldInverse;
     const v = new THREE.Vector3();
-    const items: { label: LabelObject; base: number; box: LabelBox; focused: boolean }[] = [];
-    const add = (id: string, label: LabelObject, anchor: THREE.Vector3, lift: number, selectedMoon = false) => {
-      const d = Math.max(0.001, this.camera.position.distanceTo(anchor));
-      const height = k * Math.min(d, near);
+    /** A point's place on screen, and how far in front of the camera it is (what a sprite's size follows). */
+    const onScreen = (p: THREE.Vector3) => {
+      const depth = -v.copy(p).applyMatrix4(inverse).z;
+      v.copy(p).project(this.camera);
+      return { x: ((v.x + 1) / 2) * W, y: ((1 - v.y) / 2) * H, depth, behind: v.z > 1 || depth <= 0 };
+    };
+    const GAP = 6;
+    const items: { label: LabelObject; chip: LabelObject | null; base: number; box: LabelBox; x: number; y: number; px: number }[] = [];
+    const discs: Disc[] = [];
+    const add = (id: string, label: LabelObject, chip: LabelObject | null, center: THREE.Vector3, radius: number, lift: number, solid: boolean) => {
+      const body = onScreen(center);
+      const depth = Math.max(0.001, body.depth);
+      const height = k * Math.min(depth, near);
       label.sprite.scale.set(height * label.aspect, height, 1);
-      label.sprite.position.y = anchor.y + lift + height * 0.08;
-      const px = (height / (2 * tan * d)) * H;
-      v.copy(label.sprite.position).project(this.camera);
-      const behind = v.z > 1;
-      const x = ((v.x + 1) / 2) * W;
-      const y = ((1 - v.y) / 2) * H;
+      label.sprite.position.y = center.y + lift + height * 0.08;
+      const px = (height / (2 * tan * depth)) * H;
+      const { x, y, behind } = onScreen(label.sprite.position);
       const pw = px * label.aspect;
-      const focused = id === focus || selectedMoon;
+      const focused = id === focus;
+      label.sprite.renderOrder = focused ? 7 : 5;
+      const disc = { x: body.x, y: body.y, r: (radius * H) / (2 * tan * depth) };
+      // Above the world; near a screen edge the label shifts along it, so an edge planet keeps its label on screen.
       const cx = THREE.MathUtils.clamp(x, area.l + pw / 2, Math.max(area.l + pw / 2, area.r - pw / 2));
       const cy = THREE.MathUtils.clamp(y, area.t + px, area.b);
-      // Sprite centers shift the label alone, so an edge planet keeps its label on screen.
-      label.sprite.center.set(0.5 + (x - cx) / Math.max(1, pw), (cy - y) / Math.max(1, px));
-      label.sprite.renderOrder = selectedMoon ? 8 : focused ? 7 : 5;
+      // The other places: below the world, right of it, left of it; then the same four for its logo alone.
+      const reach = disc.r + GAP;
+      const around = (w: number): Rect[] => [
+        { l: disc.x - w / 2, r: disc.x + w / 2, t: disc.y + reach, b: disc.y + reach + px },
+        { l: disc.x + reach, r: disc.x + reach + w, t: disc.y - px / 2, b: disc.y + px / 2 },
+        { l: disc.x - reach - w, r: disc.x - reach, t: disc.y - px / 2, b: disc.y + px / 2 },
+      ];
+      const alternates: Rect[] = focus ? [] : around(pw);
+      if (chip && !focus) {
+        chip.sprite.scale.set(height * chip.aspect, height, 1);
+        chip.sprite.position.y = label.sprite.position.y;
+        const cw = px * chip.aspect;
+        alternates.push({ l: x - cw / 2, r: x + cw / 2, t: y - px, b: y }, ...around(cw));
+      }
+      let own: number | undefined;
+      if (solid && !body.behind) {
+        own = discs.length;
+        discs.push(disc);
+      }
       items.push({
         label,
-        focused,
+        chip,
+        x,
+        y,
+        px,
         base: behind || x < -pw / 2 || x > W + pw / 2 || y < -px || y > H + px || px < 28 || (focus && (!focused || (moons?.placements.length ?? 0) > 14)) ? 0 : 1,
-        box: { rect: { l: cx - pw / 2, r: cx + pw / 2, t: cy - px, b: cy }, priority: selectedMoon ? -1 : d, pinned: !behind && (selectedMoon || (focused && !moons?.selected)) },
+        box: { rect: { l: cx - pw / 2, r: cx + pw / 2, t: cy - px, b: cy }, alternates, own, priority: this.camera.position.distanceTo(center), pinned: !behind && focused && !moons?.selected },
       });
     };
-    for (const w of this.worlds.values()) add(w.spec.id, w.label, w.pos, w.radius + 0.35);
-    if (this.coreLabel) add("core", this.coreLabel, new THREE.Vector3(), LAYOUT.coreRadius * 2.3);
-    const candidates = items.filter((it) => it.base > 0 && !(hero && this.heroOverlay && overlaps(it.box.rect, this.heroOverlay)));
-    const show = declutter(
-      candidates.map((it) => it.box),
-      area,
-    );
-    const allowed = new Set(candidates.filter((_, i) => show[i]).map((it) => it.label));
+    for (const w of this.worlds.values()) add(w.spec.id, w.label, w.chip, w.pos, w.radius, w.radius + 0.35, w.mesh.visible);
+    // The core counts with its inner rings: labels keep clear of them.
+    if (this.coreLabel) add("core", this.coreLabel, null, this.core.position, LAYOUT.coreRadius * 1.5, LAYOUT.coreRadius * 2.3, this.core.visible);
+    const candidates = items.filter((it) => it.base > 0);
+    const taken = place(candidates.map((it) => it.box), area, { discs, blocked: hero && this.heroOverlay ? [...this.keepOut, this.heroOverlay] : this.keepOut });
+    // Which place each label or logo takes now: the label's four sides come first, then the logo's.
+    const sides = new Map<LabelObject, number>();
+    const shown: Rect[] = [];
+    candidates.forEach((it, i) => {
+      const at = taken[i];
+      if (at < 0) return;
+      const sprite = it.chip && at >= 4 ? it.chip : it.label;
+      const rect = at ? it.box.alternates![at - 1] : it.box.rect;
+      // Sprite centers shift the label alone: its anchor stays above its world.
+      sprite.sprite.center.set(0.5 + (it.x - (rect.l + rect.r) / 2) / Math.max(1, rect.r - rect.l), (rect.b - it.y) / Math.max(1, it.px));
+      sides.set(sprite, at);
+      shown.push(rect);
+    });
     if (moons) {
       const w = this.worlds.get(moons.worldId);
       if (w) {
+        const body = onScreen(w.pos);
+        const planet = body.behind ? undefined : { x: body.x, y: body.y, r: (w.radius * H) / (2 * tan * body.depth) };
         const anchors: MoonAnchor[] = [];
+        const at = new THREE.Vector3();
         for (const p of moons.placements) {
-          v.set(w.pos.x + p.x, w.pos.y + p.y, w.pos.z + p.z);
-          const d = Math.max(.001, this.camera.position.distanceTo(v));
-          v.project(this.camera);
-          anchors.push({ slug: p.slug, x: (v.x + 1) * W / 2, y: (1 - v.y) * H / 2, radius: p.radius * H / (2 * tan * d) });
+          const moon = onScreen(at.set(w.pos.x + p.x, w.pos.y + p.y, w.pos.z + p.z));
+          const hidden = !!planet && moon.depth > body.depth && Math.hypot(moon.x - planet.x, moon.y - planet.y) < planet.r;
+          anchors.push({ slug: p.slug, x: moon.x, y: moon.y, radius: (p.radius * H) / (2 * tan * Math.max(0.001, moon.depth)), hidden });
         }
-        moons.labels.update(anchors, area, candidates.filter((it) => allowed.has(it.label)).map((it) => it.box.rect));
+        moons.labels.update(anchors, area, [...shown, ...this.keepOut], planet);
       }
     }
 
     let fading = false;
     const ease = this.reduced ? 1 : 1 - Math.exp(-dt * 10);
-    for (const it of items) {
-      const target = allowed.has(it.label) ? it.base : 0;
-      let next = it.label.opacity + (target - it.label.opacity) * ease;
+    const fade = (label: LabelObject, base: number) => {
+      const at = sides.get(label) ?? -1;
+      const target = at < 0 ? 0 : base;
+      // A label that changes sides fades in at its new place.
+      if (at >= 0 && label.side >= 0 && at !== label.side) label.opacity = 0;
+      if (at >= 0) label.side = at;
+      let next = label.opacity + (target - label.opacity) * ease;
       if (Math.abs(next - target) < 0.01) next = target;
       else fading = true;
-      it.label.opacity = next;
-      it.label.material.opacity = next;
-      it.label.sprite.visible = next > 0.01;
+      label.opacity = next;
+      label.material.opacity = next;
+      label.sprite.visible = next > 0.01;
+    };
+    for (const it of items) {
+      fade(it.label, it.base);
+      if (it.chip) fade(it.chip, it.base);
     }
     this.labelsFading = fading;
     return fading;
@@ -1559,6 +1649,7 @@ export class NexusEngine {
     for (const w of this.worlds.values()) {
       if (w.mesh.visible) hitSphere(w.pos, w.radius, w.spec.id);
       if (w.label.sprite.visible) labels.push(w.label.sprite);
+      if (w.chip.sprite.visible) labels.push(w.chip.sprite);
     }
     if (this.coreLabel?.sprite.visible) labels.push(this.coreLabel.sprite);
     if (this.moons) {

@@ -223,8 +223,9 @@ export function Landing({ route, net, engine, gl, onEnter, pickRef }: Props) {
                                 <WorldIdentity name={w.name} accent={w.accent} logo={w.logo} />
                               </a>
                             ) : (
-                              <button type="button" className="world-pill-button" onClick={() => onEnter(w.id)} aria-label={`Explore ${w.name} in the Nexus`}>
+                              <button type="button" className="world-pill-button" onClick={() => onEnter(w.id)}>
                                 <WorldIdentity name={w.name} accent={w.accent} logo={w.logo} />
+                                <span className="sr-only">, explore in the Nexus</span>
                               </button>
                             )}
                           </li>

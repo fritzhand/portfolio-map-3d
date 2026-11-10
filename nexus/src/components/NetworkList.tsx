@@ -22,7 +22,7 @@ function WorldCard({ world, onSee, headingLevel }: { world: World; onSee?: (id: 
       <div className="net-card-head">
         <div className="net-card-title">
           <H>
-            {onSee ? <button type="button" className="world-pill-button" onClick={() => onSee(world.id)} aria-label={`Explore ${world.name} in the Nexus`}><WorldIdentity name={world.name} accent={world.accent} logo={world.logo} /></button> : <WorldIdentity name={world.name} accent={world.accent} logo={world.logo} />}
+            {onSee ? <button type="button" className="world-pill-button" onClick={() => onSee(world.id)}><WorldIdentity name={world.name} accent={world.accent} logo={world.logo} /><span className="sr-only">, explore in the Nexus</span></button> : <WorldIdentity name={world.name} accent={world.accent} logo={world.logo} />}
           </H>
         </div>
       </div>

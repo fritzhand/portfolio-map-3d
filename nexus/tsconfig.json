@@ -16,6 +16,6 @@
     "noEmit": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "../federation"],
+  "include": ["src", "e2e", "playwright.config.ts", "../federation"],
   "exclude": ["../federation/**/*.test.ts"]
 }
